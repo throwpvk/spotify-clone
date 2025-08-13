@@ -565,19 +565,19 @@
   position: relative;
 }
 
-button[data-tooltip]::after,
-.library-item .item-icon[data-tooltip]::after,
-.nav-tab[data-tooltip]::after {
+button[data-label]::after,
+.library-item .item-icon[data-label]::after,
+.nav-tab[data-label]::after {
   content: "";
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s;
 }
 
-button[data-tooltip]:hover::after,
-.library-item .item-icon[data-tooltip]:hover::after,
-.nav-tab[data-tooltip]:hover::after {
-  content: attr(data-tooltip);
+button[data-label]:hover::after,
+.library-item .item-icon[data-label]:hover::after,
+.nav-tab[data-label]:hover::after {
+  content: attr(data-label);
   position: absolute;
   bottom: 100%;
   left: 50%;
@@ -596,7 +596,7 @@ button[data-tooltip]:hover::after,
   z-index: 10000;
 }
 
-button.tooltip-bottom[data-tooltip]:hover::after {
+button.tooltip-bottom[data-label]:hover::after {
   bottom: -100%;
 }
 
