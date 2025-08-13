@@ -28,22 +28,24 @@
         <nav class="sidebar-nav">
           <div class="nav-section">
             <h2 class="section-title">Your Library</h2>
-            <button class="create-btn">
+            <button data-tooltip="Tạo Playlist" class="create-btn">
               <i class="fas fa-plus"></i>
               Create
             </button>
           </div>
 
           <div class="nav-tabs">
-            <button class="nav-tab active">Playlists</button>
-            <button class="nav-tab">Artists</button>
+            <button data-tooltip="tooltip" class="nav-tab active">
+              Playlists
+            </button>
+            <button data-tooltip="tooltip" class="nav-tab">Artists</button>
           </div>
 
           <div class="search-library">
-            <button class="search-library-btn">
+            <button data-tooltip="tooltip" class="search-library-btn">
               <i class="fas fa-search"></i>
             </button>
-            <button class="sort-btn">
+            <button data-tooltip="tooltip" class="sort-btn">
               Recents
               <i class="fas fa-list"></i>
             </button>
@@ -51,7 +53,7 @@
 
           <div class="library-content">
             <div class="library-item active">
-              <div class="item-icon liked-songs">
+              <div data-tooltip="tooltip" class="item-icon liked-songs">
                 <i class="fas fa-heart"></i>
               </div>
               <div class="item-info">
@@ -64,11 +66,14 @@
             </div>
 
             <div class="library-item">
-              <img
-                src="placeholder.svg?height=48&width=48"
-                alt="Đen"
-                class="item-image"
-              />
+              <div data-tooltip="tooltip" class="item-icon">
+                <img
+                  src="placeholder.svg?height=48&width=48"
+                  alt="Đen"
+                  class="item-image"
+                />
+              </div>
+
               <div class="item-info">
                 <div class="item-title">Đen</div>
                 <div class="item-subtitle">Artist</div>
@@ -76,11 +81,14 @@
             </div>
 
             <div class="library-item">
-              <img
-                src="placeholder.svg?height=48&width=48"
-                alt="Trúc Nhân"
-                class="item-image"
-              />
+              <div data-tooltip="tooltip" class="item-icon">
+                <img
+                  src="placeholder.svg?height=48&width=48"
+                  alt="Trúc Nhân"
+                  class="item-image"
+                />
+              </div>
+
               <div class="item-info">
                 <div class="item-title">Trúc Nhân</div>
                 <div class="item-subtitle">Artist</div>
@@ -88,11 +96,14 @@
             </div>
 
             <div class="library-item">
-              <img
-                src="placeholder.svg?height=48&width=48"
-                alt="24.03"
-                class="item-image"
-              />
+              <div data-tooltip="tooltip" class="item-icon">
+                <img
+                  src="placeholder.svg?height=48&width=48"
+                  alt="24.03"
+                  class="item-image"
+                />
+              </div>
+
               <div class="item-info">
                 <div class="item-title">24.03</div>
                 <div class="item-subtitle">Playlist • Han</div>
@@ -100,11 +111,14 @@
             </div>
 
             <div class="library-item">
-              <img
-                src="placeholder.svg?height=48&width=48"
-                alt="Thùy Chi"
-                class="item-image"
-              />
+              <div data-tooltip="tooltip" class="item-icon">
+                <img
+                  src="placeholder.svg?height=48&width=48"
+                  alt="Thùy Chi"
+                  class="item-image"
+                />
+              </div>
+
               <div class="item-info">
                 <div class="item-title">Thùy Chi</div>
                 <div class="item-subtitle">Artist</div>
@@ -119,7 +133,7 @@
         <header class="main-header">
           <div class="search-container">
             <div class="search-box">
-              <button class="home-btn">
+              <button data-tooltip="tooltip" class="home-btn tooltip-bottom">
                 <i class="fas fa-home"></i>
               </button>
               <div class="search-input-wrapper">
@@ -134,11 +148,25 @@
           </div>
           <div class="header-actions">
             <div class="auth-buttons">
-              <button class="auth-btn signup-btn">Sign up</button>
-              <button class="auth-btn login-btn">Log in</button>
+              <button
+                data-tooltip="tooltip"
+                class="auth-btn signup-btn tooltip-bottom"
+              >
+                Sign up
+              </button>
+              <button
+                data-tooltip="tooltip"
+                class="auth-btn login-btn tooltip-bottom"
+              >
+                Log in
+              </button>
             </div>
             <div class="user-menu">
-              <button class="user-avatar" id="userAvatar">
+              <button
+                data-tooltip="tooltip"
+                class="user-avatar"
+                id="userAvatar"
+              >
                 <img
                   src="placeholder.svg?height=32&width=32"
                   alt="User Avatar"
@@ -167,7 +195,7 @@
                     src="placeholder.svg?height=160&width=160"
                     alt="Flowers"
                   />
-                  <button class="hit-play-btn">
+                  <button data-tooltip="tooltip" class="hit-play-btn">
                     <i class="fas fa-play"></i>
                   </button>
                 </div>
@@ -183,7 +211,7 @@
                     src="placeholder.svg?height=160&width=160"
                     alt="Anti-Hero"
                   />
-                  <button class="hit-play-btn">
+                  <button data-tooltip="tooltip" class="hit-play-btn">
                     <i class="fas fa-play"></i>
                   </button>
                 </div>
@@ -199,7 +227,7 @@
                     src="placeholder.svg?height=160&width=160"
                     alt="Lối Nhỏ"
                   />
-                  <button class="hit-play-btn">
+                  <button data-tooltip="tooltip" class="hit-play-btn">
                     <i class="fas fa-play"></i>
                   </button>
                 </div>
@@ -215,7 +243,7 @@
                     src="placeholder.svg?height=160&width=160"
                     alt="As It Was"
                   />
-                  <button class="hit-play-btn">
+                  <button data-tooltip="tooltip" class="hit-play-btn">
                     <i class="fas fa-play"></i>
                   </button>
                 </div>
@@ -231,7 +259,7 @@
                     src="placeholder.svg?height=160&width=160"
                     alt="Unholy"
                   />
-                  <button class="hit-play-btn">
+                  <button data-tooltip="tooltip" class="hit-play-btn">
                     <i class="fas fa-play"></i>
                   </button>
                 </div>
@@ -247,7 +275,7 @@
                     src="placeholder.svg?height=160&width=160"
                     alt="Cho Tôi Lang Thang"
                   />
-                  <button class="hit-play-btn">
+                  <button data-tooltip="tooltip" class="hit-play-btn">
                     <i class="fas fa-play"></i>
                   </button>
                 </div>
@@ -268,7 +296,7 @@
               <div class="artist-card">
                 <div class="artist-card-cover">
                   <img src="placeholder.svg?height=160&width=160" alt="Đen" />
-                  <button class="artist-play-btn">
+                  <button data-tooltip="tooltip" class="artist-play-btn">
                     <i class="fas fa-play"></i>
                   </button>
                 </div>
@@ -284,7 +312,7 @@
                     src="placeholder.svg?height=160&width=160"
                     alt="Taylor Swift"
                   />
-                  <button class="artist-play-btn">
+                  <button data-tooltip="tooltip" class="artist-play-btn">
                     <i class="fas fa-play"></i>
                   </button>
                 </div>
@@ -300,7 +328,7 @@
                     src="placeholder.svg?height=160&width=160"
                     alt="Sơn Tùng M-TP"
                   />
-                  <button class="artist-play-btn">
+                  <button data-tooltip="tooltip" class="artist-play-btn">
                     <i class="fas fa-play"></i>
                   </button>
                 </div>
@@ -316,7 +344,7 @@
                     src="placeholder.svg?height=160&width=160"
                     alt="Harry Styles"
                   />
-                  <button class="artist-play-btn">
+                  <button data-tooltip="tooltip" class="artist-play-btn">
                     <i class="fas fa-play"></i>
                   </button>
                 </div>
@@ -332,7 +360,7 @@
                     src="placeholder.svg?height=160&width=160"
                     alt="Trúc Nhân"
                   />
-                  <button class="artist-play-btn">
+                  <button data-tooltip="tooltip" class="artist-play-btn">
                     <i class="fas fa-play"></i>
                   </button>
                 </div>
@@ -366,7 +394,7 @@
 
           <!-- Artist Controls -->
           <section class="artist-controls">
-            <button class="play-btn-large">
+            <button data-tooltip="tooltip" class="play-btn-large">
               <i class="fas fa-play"></i>
             </button>
           </section>
@@ -388,7 +416,7 @@
                 </div>
                 <div class="track-plays">27,498,341</div>
                 <div class="track-duration">4:18</div>
-                <button class="track-menu-btn">
+                <button data-tooltip="tooltip" class="track-menu-btn">
                   <i class="fas fa-ellipsis-h"></i>
                 </button>
               </div>
@@ -405,7 +433,7 @@
                 </div>
                 <div class="track-plays">45,686,866</div>
                 <div class="track-duration">4:12</div>
-                <button class="track-menu-btn">
+                <button data-tooltip="tooltip" class="track-menu-btn">
                   <i class="fas fa-ellipsis-h"></i>
                 </button>
               </div>
@@ -423,7 +451,7 @@
                 </div>
                 <div class="track-plays">20,039,024</div>
                 <div class="track-duration">3:26</div>
-                <button class="track-menu-btn">
+                <button data-tooltip="tooltip" class="track-menu-btn">
                   <i class="fas fa-ellipsis-h"></i>
                 </button>
               </div>
@@ -444,26 +472,46 @@
             <div class="player-title">Yêu Một Người Sao Buồn Đến Thế</div>
             <div class="player-artist">Noo Phước Thịnh</div>
           </div>
-          <button class="add-btn">
+          <button data-tooltip="tooltip" class="add-btn">
             <i class="fa-solid fa-plus"></i>
           </button>
         </div>
 
         <div class="player-center">
           <div class="player-controls">
-            <button class="control-btn active">
+            <button
+              data-tooltip="tooltip"
+              class="control-btn active"
+              data-tooltip="Phát ngẫu nhiên"
+            >
               <i class="fas fa-random"></i>
             </button>
-            <button class="control-btn">
+            <button
+              data-tooltip="tooltip"
+              class="control-btn"
+              data-tooltip="Phát ngẫu nhiên"
+            >
               <i class="fas fa-step-backward"></i>
             </button>
-            <button class="control-btn play-btn">
+            <button
+              data-tooltip="tooltip"
+              class="control-btn play-btn"
+              data-tooltip="Phát ngẫu nhiên"
+            >
               <i class="fas fa-pause"></i>
             </button>
-            <button class="control-btn">
+            <button
+              data-tooltip="tooltip"
+              class="control-btn"
+              data-tooltip="Phát ngẫu nhiên"
+            >
               <i class="fas fa-step-forward"></i>
             </button>
-            <button class="control-btn">
+            <button
+              data-tooltip="tooltip"
+              class="control-btn"
+              data-tooltip="Phát ngẫu nhiên"
+            >
               <i class="fas fa-redo"></i>
             </button>
           </div>
@@ -478,11 +526,11 @@
         </div>
 
         <div class="player-right">
-          <button class="control-btn">
+          <button data-tooltip="tooltip" class="control-btn">
             <i class="fas fa-microphone"></i>
           </button>
           <div class="volume-container">
-            <button class="control-btn">
+            <button data-tooltip="tooltip" class="control-btn">
               <i class="fas fa-volume-down"></i>
             </button>
             <div class="volume-bar">
@@ -490,7 +538,7 @@
               <div class="volume-handle"></div>
             </div>
           </div>
-          <button class="control-btn">
+          <button data-tooltip="tooltip" class="control-btn">
             <i class="fas fa-expand"></i>
           </button>
         </div>
@@ -500,7 +548,7 @@
     <!-- Auth Modal -->
     <div class="modal-overlay" id="authModal">
       <div class="modal-container">
-        <button class="modal-close" id="modalClose">
+        <button data-tooltip="tooltip" class="modal-close" id="modalClose">
           <i class="fas fa-times"></i>
         </button>
 
@@ -540,12 +588,20 @@
                 </div>
               </div>
 
-              <button type="submit" class="auth-submit-btn">Sign Up</button>
+              <button
+                data-tooltip="tooltip"
+                type="submit"
+                class="auth-submit-btn"
+              >
+                Sign Up
+              </button>
             </form>
 
             <div class="auth-switch">
               <span>Already have an account? </span>
-              <button class="auth-link" id="showLogin">Log in here</button>
+              <button data-tooltip="tooltip" class="auth-link" id="showLogin">
+                Log in here
+              </button>
             </div>
           </div>
 
@@ -580,12 +636,20 @@
                 </div>
               </div>
 
-              <button type="submit" class="auth-submit-btn">Log In</button>
+              <button
+                data-tooltip="tooltip"
+                type="submit"
+                class="auth-submit-btn"
+              >
+                Log In
+              </button>
             </form>
 
             <div class="auth-switch">
               <span>Don't have an account? </span>
-              <button class="auth-link" id="showSignup">Sign up here</button>
+              <button data-tooltip="tooltip" class="auth-link" id="showSignup">
+                Sign up here
+              </button>
             </div>
           </div>
         </div>
