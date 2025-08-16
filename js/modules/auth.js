@@ -1,302 +1,447 @@
 /**
- * Authentication Module
- * Module xử lý tất cả logic liên quan đến authentication
+ * Authentication Service Module
+ * Service xử lý tất cả logic liên quan đến authentication
  */
 
-import { apiService } from './api.js';
-import { API_ENDPOINTS } from '../constants/api.js';
-import { APP_CONFIG } from '../constants/config.js';
-import { MESSAGES } from '../constants/messages.js';
-import { uiService } from './ui.js';
+import { apiService } from "./api.js";
+import { APP_CONFIG } from "../constants/config.js";
+import { MESSAGES } from "../constants/messages.js";
 
 class AuthService {
-    constructor() {
-        this.currentUser = null;
-        this.isAuthenticated = false;
-        this.init();
+  constructor() {
+    this.currentUser = null;
+    this.isInitialized = false;
+    this._init();
+  }
+
+  /**
+   * Khởi tạo service
+   */
+  async _init() {
+    try {
+      // Kiểm tra authentication hiện tại
+      await this._checkExistingAuth();
+
+      // Lắng nghe thay đổi localStorage để sync giữa các tab
+      this._setupStorageListener();
+
+      this.isInitialized = true;
+      console.log("Auth service initialized successfully");
+    } catch (error) {
+      console.error("Error initializing auth service:", error);
+    }
+  }
+
+  /**
+   * Kiểm tra authentication hiện tại
+   */
+  async _checkExistingAuth() {
+    const token = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.AUTH_TOKEN);
+    const userData = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.USER_DATA);
+
+    // Kiểm tra token hợp lệ
+    if (
+      !token ||
+      token === "undefined" ||
+      token === "null" ||
+      token.trim() === ""
+    ) {
+      console.log("No valid token found, clearing auth data");
+      this._clearAuthData();
+      return;
     }
 
-    /**
-     * Khởi tạo service
-     */
-    init() {
-        this.checkAuthStatus();
-        this.setupEventListeners();
+    if (token && userData) {
+      try {
+        // Validate token với server
+        await this._validateToken();
+
+        // Parse user data
+        this.currentUser = JSON.parse(userData);
+
+        console.log(
+          "User session restored:",
+          this.currentUser.display_name || this.currentUser.username
+        );
+
+        // Cập nhật UI
+        this._updateUI();
+      } catch (error) {
+        console.error("Token validation failed:", error);
+        this._clearAuthData();
+      }
+    } else {
+      console.log("No existing session found");
     }
+  }
 
-    /**
-     * Kiểm tra trạng thái authentication
-     */
-    checkAuthStatus() {
-        const token = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.AUTH_TOKEN);
-        const userData = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.USER_DATA);
+  /**
+   * Validate token với server
+   */
+  async _validateToken() {
+    try {
+      const response = await apiService.getProfile();
+      if (response.success) {
+        // Token hợp lệ, cập nhật user data nếu cần
+        const serverUserData = response.data;
+        if (
+          serverUserData &&
+          JSON.stringify(serverUserData) !==
+            localStorage.getItem(APP_CONFIG.STORAGE_KEYS.USER_DATA)
+        ) {
+          this.currentUser = serverUserData;
+          localStorage.setItem(
+            APP_CONFIG.STORAGE_KEYS.USER_DATA,
+            JSON.stringify(serverUserData)
+          );
+        }
+      }
+    } catch (error) {
+      if (error.status === 401) {
+        // Token không hợp lệ, clear auth data
+        throw new Error("Token expired or invalid");
+      }
+      throw error;
+    }
+  }
 
-        if (token && userData) {
-            try {
-                this.currentUser = JSON.parse(userData);
-                this.isAuthenticated = true;
-                this.updateUIForAuthenticatedUser();
-            } catch (error) {
-                console.error('Error parsing user data:', error);
-                this.logout();
-            }
+  /**
+   * Lắng nghe thay đổi localStorage
+   */
+  _setupStorageListener() {
+    window.addEventListener("storage", this._handleStorageChange.bind(this));
+  }
+
+  /**
+   * Xử lý thay đổi localStorage
+   */
+  _handleStorageChange(e) {
+    if (e.key === APP_CONFIG.STORAGE_KEYS.AUTH_TOKEN) {
+      if (!e.newValue) {
+        // Token bị xóa ở tab khác, logout
+        console.log("Token removed in another tab, logging out");
+        this._clearAuthData();
+        this._updateUI();
+      } else if (e.newValue !== e.oldValue) {
+        // Token thay đổi, reload user data
+        console.log("Token changed in another tab, reloading user data");
+        this._checkExistingAuth();
+      }
+    }
+  }
+
+  /**
+   * Lưu authentication data
+   */
+  _saveAuthData(accessToken, refreshToken, user) {
+    localStorage.setItem(APP_CONFIG.STORAGE_KEYS.AUTH_TOKEN, accessToken);
+    localStorage.setItem(APP_CONFIG.STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
+    localStorage.setItem(
+      APP_CONFIG.STORAGE_KEYS.USER_DATA,
+      JSON.stringify(user)
+    );
+
+    console.log("Auth data saved to localStorage");
+    console.log(
+      "Access token:",
+      accessToken ? `${accessToken.substring(0, 20)}...` : "undefined"
+    );
+    console.log(
+      "Refresh token:",
+      refreshToken ? `${refreshToken.substring(0, 20)}...` : "undefined"
+    );
+  }
+
+  /**
+   * Xóa authentication data
+   */
+  _clearAuthData() {
+    localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.AUTH_TOKEN);
+    localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.REFRESH_TOKEN);
+    localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.USER_DATA);
+
+    this.currentUser = null;
+
+    console.log("Auth data cleared from localStorage");
+  }
+
+  /**
+   * Cập nhật UI dựa trên trạng thái authentication
+   */
+  _updateUI() {
+    if (window.spotifyApp && window.spotifyApp.getService) {
+      const uiService = window.spotifyApp.getService("ui");
+      if (uiService) {
+        if (this.currentUser) {
+          uiService.updateUIForAuthenticatedUser(this.currentUser);
         } else {
-            this.updateUIForUnauthenticatedUser();
+          uiService.updateUIForUnauthenticatedUser();
         }
+      }
+    }
+  }
+
+  /**
+   * Validate dữ liệu đăng ký
+   */
+  _validateRegistrationData(userData) {
+    const errors = [];
+
+    // Validate username
+    if (!userData.username) {
+      errors.push("Tên người dùng là bắt buộc");
+    } else if (
+      userData.username.length < APP_CONFIG.VALIDATION.USERNAME_MIN_LENGTH
+    ) {
+      errors.push(
+        `Tên người dùng phải có ít nhất ${APP_CONFIG.VALIDATION.USERNAME_MIN_LENGTH} ký tự`
+      );
+    } else if (
+      userData.username.length > APP_CONFIG.VALIDATION.USERNAME_MAX_LENGTH
+    ) {
+      errors.push(
+        `Tên người dùng không được quá ${APP_CONFIG.VALIDATION.USERNAME_MAX_LENGTH} ký tự`
+      );
+    } else if (!APP_CONFIG.VALIDATION.USERNAME_REGEX.test(userData.username)) {
+      errors.push("Tên người dùng chỉ được chứa chữ cái, số và dấu gạch dưới");
     }
 
-    /**
-     * Thiết lập event listeners
-     */
-    setupEventListeners() {
-        // Logout button
-        const logoutBtn = document.getElementById('logoutBtn');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', () => this.logout());
-        }
-
-        // User avatar click
-        const userAvatar = document.getElementById('userAvatar');
-        if (userAvatar) {
-            userAvatar.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.toggleUserDropdown();
-            });
-        }
+    // Validate email
+    if (!userData.email) {
+      errors.push("Email là bắt buộc");
+    } else if (!APP_CONFIG.VALIDATION.EMAIL_REGEX.test(userData.email)) {
+      errors.push("Email không hợp lệ");
     }
 
-    /**
-     * Validation cho form đăng ký
-     */
-    validateRegistration(data) {
-        const errors = [];
-
-        if (!data.email || !APP_CONFIG.VALIDATION.EMAIL_REGEX.test(data.email)) {
-            errors.push(MESSAGES.ERROR.INVALID_EMAIL);
-        }
-
-        if (!data.password || data.password.length < APP_CONFIG.VALIDATION.PASSWORD_MIN_LENGTH) {
-            errors.push(MESSAGES.ERROR.PASSWORD_TOO_SHORT);
-        }
-
-        if (!data.username || data.username.length < APP_CONFIG.VALIDATION.USERNAME_MIN_LENGTH) {
-            errors.push('Tên người dùng phải có ít nhất 3 ký tự');
-        }
-
-        return errors;
+    // Validate password
+    if (!userData.password) {
+      errors.push("Mật khẩu là bắt buộc");
+    } else if (
+      userData.password.length < APP_CONFIG.VALIDATION.PASSWORD_MIN_LENGTH
+    ) {
+      errors.push(
+        `Mật khẩu phải có ít nhất ${APP_CONFIG.VALIDATION.PASSWORD_MIN_LENGTH} ký tự`
+      );
+    } else if (!APP_CONFIG.VALIDATION.PASSWORD_REGEX.test(userData.password)) {
+      errors.push("Mật khẩu phải bao gồm chữ hoa, chữ thường và số");
     }
 
-    /**
-     * Validation cho form đăng nhập
-     */
-    validateLogin(data) {
-        const errors = [];
+    return errors;
+  }
 
-        if (!data.email || !APP_CONFIG.VALIDATION.EMAIL_REGEX.test(data.email)) {
-            errors.push(MESSAGES.ERROR.INVALID_EMAIL);
+  /**
+   * Validate dữ liệu đăng nhập
+   */
+  _validateLoginData(credentials) {
+    const errors = [];
+
+    if (!credentials.email) {
+      errors.push("Email là bắt buộc");
+    } else if (!APP_CONFIG.VALIDATION.EMAIL_REGEX.test(credentials.email)) {
+      errors.push("Email không hợp lệ");
+    }
+
+    if (!credentials.password) {
+      errors.push("Mật khẩu là bắt buộc");
+    }
+
+    return errors;
+  }
+
+  /**
+   * Xử lý API error
+   */
+  _handleApiError(error) {
+    if (error.isApiError && error.data) {
+      // Xử lý error từ API
+      if (error.status === 400) {
+        if (error.data.message) {
+          return error.data.message;
+        }
+        // Xử lý các trường hợp cụ thể
+        if (error.data.email && error.data.email.includes("already exists")) {
+          return MESSAGES.AUTH.REGISTER_EMAIL_EXISTS;
+        }
+        if (
+          error.data.username &&
+          error.data.username.includes("already exists")
+        ) {
+          return MESSAGES.AUTH.REGISTER_USERNAME_EXISTS;
+        }
+      } else if (error.status === 401) {
+        return MESSAGES.AUTH.LOGIN_INVALID_CREDENTIALS;
+      }
+    }
+
+    // Fallback error message
+    return error.message || "Có lỗi xảy ra";
+  }
+
+  // ===== PUBLIC METHODS =====
+
+  /**
+   * Đăng ký tài khoản mới
+   */
+  async register(userData) {
+    try {
+      // Validation dữ liệu
+      const validationErrors = this._validateRegistrationData(userData);
+      if (validationErrors.length > 0) {
+        throw new Error(validationErrors.join(", "));
+      }
+
+      // Chuẩn bị data cho API
+      const apiData = {
+        username: userData.username,
+        email: userData.email,
+        password: userData.password,
+        display_name: userData.display_name || userData.username,
+        bio: userData.bio || APP_CONFIG.DEFAULTS.USER_BIO,
+        country: userData.country || APP_CONFIG.DEFAULTS.USER_COUNTRY,
+      };
+
+      // Gọi API đăng ký
+      const response = await apiService.register(apiData);
+
+      if (response.success) {
+        // Đăng ký thành công, tự động đăng nhập
+        const loginData = {
+          email: userData.email,
+          password: userData.password,
+        };
+
+        await this.login(loginData);
+
+        // Hiển thị toast thành công
+        if (window.spotifyApp && window.spotifyApp.getService) {
+          const uiService = window.spotifyApp.getService("ui");
+          if (uiService) {
+            uiService.showToast(MESSAGES.AUTH.REGISTER_SUCCESS, "success");
+          }
         }
 
-        if (!data.password) {
-            errors.push('Vui lòng nhập mật khẩu');
+        return response.data;
+      }
+    } catch (error) {
+      const errorMessage = this._handleApiError(error);
+      throw new Error(errorMessage);
+    }
+  }
+
+  /**
+   * Đăng nhập
+   */
+  async login(credentials) {
+    try {
+      // Validation dữ liệu
+      const validationErrors = this._validateLoginData(credentials);
+      if (validationErrors.length > 0) {
+        throw new Error(validationErrors.join(", "));
+      }
+
+      // Gọi API đăng nhập
+      const response = await apiService.login(credentials);
+
+      if (response.success) {
+        // Xử lý response format đúng từ API
+        const { access_token, refresh_token, user } = response.data;
+
+        // Lưu authentication data
+        this._saveAuthData(access_token, refresh_token, user);
+        this.currentUser = user;
+
+        console.log("Login successful:", user.display_name || user.username);
+
+        // Cập nhật UI
+        this._updateUI();
+
+        // Hiển thị toast thành công
+        if (window.spotifyApp && window.spotifyApp.getService) {
+          const uiService = window.spotifyApp.getService("ui");
+          if (uiService) {
+            uiService.showToast(MESSAGES.AUTH.LOGIN_SUCCESS, "success");
+          }
         }
 
-        return errors;
+        return user;
+      }
+    } catch (error) {
+      const errorMessage = this._handleApiError(error);
+      throw new Error(errorMessage);
+    }
+  }
+
+  /**
+   * Đăng xuất
+   */
+  logout() {
+    // Clear authentication data
+    this._clearAuthData();
+
+    console.log("User logged out successfully");
+
+    // Cập nhật UI
+    this._updateUI();
+
+    // Hiển thị toast thành công
+    if (window.spotifyApp && window.spotifyApp.getService) {
+      const uiService = window.spotifyApp.getService("ui");
+      if (uiService) {
+        uiService.showToast(MESSAGES.AUTH.LOGOUT_SUCCESS, "success");
+      }
     }
 
-    /**
-     * Đăng ký tài khoản mới
-     */
-    async register(userData) {
-        try {
-            // Validation
-            const validationErrors = this.validateRegistration(userData);
-            if (validationErrors.length > 0) {
-                throw new Error(validationErrors.join(', '));
-            }
+    // Chuyển về trang chủ
+    window.location.href = "/";
+  }
 
-            // Gọi API đăng ký
-            const response = await apiService.post(API_ENDPOINTS.AUTH.REGISTER, userData, {
-                includeAuth: false
-            });
+  /**
+   * Kiểm tra user đã đăng nhập chưa
+   */
+  isUserAuthenticated() {
+    return (
+      !!this.currentUser &&
+      !!localStorage.getItem(APP_CONFIG.STORAGE_KEYS.AUTH_TOKEN)
+    );
+  }
 
-            // Lưu thông tin user và token
-            this.currentUser = response.user;
-            this.isAuthenticated = true;
-            this.saveUserData(response);
+  /**
+   * Lấy thông tin user hiện tại
+   */
+  getCurrentUser() {
+    return this.currentUser;
+  }
 
-            // Hiển thị thông báo thành công
-            uiService.showToast(MESSAGES.SUCCESS.REGISTER, 'success');
-            
-            // Tự động đăng nhập sau khi đăng ký
-            await this.login({
-                email: userData.email,
-                password: userData.password
-            });
+  /**
+   * Lấy auth token
+   */
+  getAuthToken() {
+    return localStorage.getItem(APP_CONFIG.STORAGE_KEYS.AUTH_TOKEN);
+  }
 
-            return response;
+  /**
+   * Kiểm tra service đã khởi tạo chưa
+   */
+  isInitialized() {
+    return this.isInitialized;
+  }
 
-        } catch (error) {
-            uiService.showToast(error.message, 'error');
-            throw error;
-        }
-    }
-
-    /**
-     * Đăng nhập
-     */
-    async login(credentials) {
-        try {
-            // Validation
-            const validationErrors = this.validateLogin(credentials);
-            if (validationErrors.length > 0) {
-                throw new Error(validationErrors.join(', '));
-            }
-
-            // Gọi API đăng nhập
-            const response = await apiService.post(API_ENDPOINTS.AUTH.LOGIN, credentials, {
-                includeAuth: false
-            });
-
-            // Lưu thông tin user và token
-            this.currentUser = response.user;
-            this.isAuthenticated = true;
-            this.saveUserData(response);
-
-            // Hiển thị thông báo thành công
-            uiService.showToast(MESSAGES.SUCCESS.LOGIN, 'success');
-
-            // Cập nhật UI
-            this.updateUIForAuthenticatedUser();
-
-            return response;
-
-        } catch (error) {
-            uiService.showToast(error.message, 'error');
-            throw error;
-        }
-    }
-
-    /**
-     * Đăng xuất
-     */
-    async logout() {
-        try {
-            // Gọi API đăng xuất
-            if (this.isAuthenticated) {
-                await apiService.post(API_ENDPOINTS.AUTH.LOGOUT);
-            }
-        } catch (error) {
-            console.error('Logout API error:', error);
-        } finally {
-            // Xóa dữ liệu local
-            this.clearUserData();
-            
-            // Cập nhật trạng thái
-            this.currentUser = null;
-            this.isAuthenticated = false;
-
-            // Cập nhật UI
-            this.updateUIForUnauthenticatedUser();
-
-            // Hiển thị thông báo
-            uiService.showToast(MESSAGES.SUCCESS.LOGOUT, 'success');
-
-            // Chuyển về trang chủ
-            this.redirectToHome();
-        }
-    }
-
-    /**
-     * Lưu thông tin user vào localStorage
-     */
-    saveUserData(response) {
-        localStorage.setItem(APP_CONFIG.STORAGE_KEYS.AUTH_TOKEN, response.token);
-        localStorage.setItem(APP_CONFIG.STORAGE_KEYS.USER_DATA, JSON.stringify(response.user));
-    }
-
-    /**
-     * Xóa thông tin user khỏi localStorage
-     */
-    clearUserData() {
-        localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.AUTH_TOKEN);
-        localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.USER_DATA);
-    }
-
-    /**
-     * Cập nhật UI cho user đã đăng nhập
-     */
-    updateUIForAuthenticatedUser() {
-        // Ẩn nút đăng nhập/đăng ký
-        const authButtons = document.querySelectorAll('.signup-btn, .login-btn');
-        authButtons.forEach(btn => btn.style.display = 'none');
-
-        // Hiển thị user info
-        const userInfo = document.querySelector('.user-info');
-        if (userInfo) {
-            userInfo.style.display = 'flex';
-        }
-
-        // Cập nhật avatar và tên
-        const userAvatar = document.getElementById('userAvatar');
-        const userName = document.getElementById('userName');
-        
-        if (userAvatar && this.currentUser?.avatar) {
-            userAvatar.src = this.currentUser.avatar;
-        }
-        
-        if (userName && this.currentUser?.displayName) {
-            userName.textContent = this.currentUser.displayName;
-        }
-    }
-
-    /**
-     * Cập nhật UI cho user chưa đăng nhập
-     */
-    updateUIForUnauthenticatedUser() {
-        // Hiển thị nút đăng nhập/đăng ký
-        const authButtons = document.querySelectorAll('.signup-btn, .login-btn');
-        authButtons.forEach(btn => btn.style.display = 'block');
-
-        // Ẩn user info
-        const userInfo = document.querySelector('.user-info');
-        if (userInfo) {
-            userInfo.style.display = 'none';
-        }
-    }
-
-    /**
-     * Toggle user dropdown
-     */
-    toggleUserDropdown() {
-        const userDropdown = document.getElementById('userDropdown');
-        if (userDropdown) {
-            userDropdown.classList.toggle('show');
-        }
-    }
-
-    /**
-     * Chuyển về trang chủ
-     */
-    redirectToHome() {
-        // Có thể sử dụng router hoặc reload page
-        window.location.reload();
-    }
-
-    /**
-     * Kiểm tra user có đăng nhập không
-     */
-    isUserAuthenticated() {
-        return this.isAuthenticated;
-    }
-
-    /**
-     * Lấy thông tin user hiện tại
-     */
-    getCurrentUser() {
+  /**
+   * Refresh user data từ server
+   */
+  async refreshUserData() {
+    if (this.isUserAuthenticated()) {
+      try {
+        await this._validateToken();
         return this.currentUser;
+      } catch (error) {
+        console.error("Failed to refresh user data:", error);
+        this.logout();
+        throw error;
+      }
     }
+  }
 }
 
-// Export instance singleton
+// Export singleton instance
 export const authService = new AuthService();
-export default authService; 

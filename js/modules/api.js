@@ -1,154 +1,271 @@
 /**
- * API Module
- * Module chính xử lý tất cả HTTP requests đến server
+ * API Service Module
+ * Service xử lý tất cả HTTP requests đến API
  */
 
-import { API_BASE_URL, API_ENDPOINTS, HTTP_METHODS } from '../constants/api.js';
-import { APP_CONFIG } from '../constants/config.js';
-import { MESSAGES } from '../constants/messages.js';
+import { API_ENDPOINTS, APP_CONFIG } from "../constants/index.js";
 
 class ApiService {
-    constructor() {
-        this.baseURL = API_BASE_URL;
-        this.timeout = APP_CONFIG.API_TIMEOUT;
-        this.maxRetries = APP_CONFIG.MAX_RETRY_ATTEMPTS;
+  constructor() {
+    this.baseURL = APP_CONFIG.API.BASE_URL;
+    this.timeout = APP_CONFIG.API.TIMEOUT;
+    this.retryAttempts = APP_CONFIG.API.RETRY_ATTEMPTS;
+  }
+
+  // ===== CORE REQUEST METHODS =====
+
+  /**
+   * Thực hiện HTTP request
+   */
+  async _makeRequest(url, options = {}) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+        headers: {
+          "Content-Type": "application/json",
+          ...this._getAuthHeaders(),
+          ...options.headers,
+        },
+      });
+
+      clearTimeout(timeoutId);
+      return await this._handleResponse(response);
+    } catch (error) {
+      clearTimeout(timeoutId);
+      throw this._handleError(error);
+    }
+  }
+
+  /**
+   * Xử lý response từ API
+   */
+  async _handleResponse(response) {
+    if (!response.ok) {
+      const errorData = await this._parseErrorResponse(response);
+      throw this._createApiError(response.status, errorData);
     }
 
-    /**
-     * Lấy auth token từ localStorage
-     */
-    getAuthToken() {
-        return localStorage.getItem(APP_CONFIG.STORAGE_KEYS.AUTH_TOKEN);
+    try {
+      const data = await response.json();
+      return {
+        success: true,
+        data: data,
+        status: response.status,
+        headers: response.headers,
+      };
+    } catch (error) {
+      return {
+        success: true,
+        data: null,
+        status: response.status,
+        headers: response.headers,
+      };
+    }
+  }
+
+  /**
+   * Parse error response
+   */
+  async _parseErrorResponse(response) {
+    try {
+      return await response.json();
+    } catch {
+      return {
+        message: response.statusText || "Unknown error",
+        status: response.status,
+      };
+    }
+  }
+
+  /**
+   * Tạo API error object
+   */
+  _createApiError(status, data) {
+    const error = new Error(data.message || "API Error");
+    error.status = status;
+    error.data = data;
+    error.isApiError = true;
+    return error;
+  }
+
+  /**
+   * Xử lý error
+   */
+  _handleError(error) {
+    if (error.name === "AbortError") {
+      error.message = "Request timeout";
+      error.status = 408;
+    } else if (error.isApiError) {
+      return error;
+    } else {
+      error.message = "Network error";
+      error.status = 0;
+    }
+    return error;
+  }
+
+  /**
+   * Lấy auth headers - Tự động thêm token nếu có
+   */
+  _getAuthHeaders() {
+    const token = this._getAuthToken();
+
+    if (token) {
+      console.log(
+        "Adding auth header with token:",
+        `${token.substring(0, 20)}...`
+      );
+      return { Authorization: `Bearer ${token}` };
     }
 
-    /**
-     * Tạo headers cho request
-     */
-    createHeaders(includeAuth = true) {
-        const headers = {
-            'Content-Type': 'application/json',
-        };
+    return {};
+  }
 
-        if (includeAuth) {
-            const token = this.getAuthToken();
-            if (token) {
-                headers['Authorization'] = `Bearer ${token}`;
-            }
-        }
+  /**
+   * Lấy auth token từ localStorage
+   */
+  _getAuthToken() {
+    const token = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.AUTH_TOKEN);
 
-        return headers;
+    // Kiểm tra token hợp lệ
+    if (
+      !token ||
+      token === "undefined" ||
+      token === "null" ||
+      token.trim() === ""
+    ) {
+      console.warn("Invalid or missing auth token");
+      return null;
     }
 
-    /**
-     * Xử lý response từ API
-     */
-    async handleResponse(response) {
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-        }
-        return response.json();
+    return token;
+  }
+
+  /**
+   * Kiểm tra có token không
+   */
+  _hasAuthToken() {
+    return !!this._getAuthToken();
+  }
+
+  // ===== PUBLIC HTTP METHODS =====
+
+  async get(url, params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    const fullUrl = queryString ? `${url}?${queryString}` : url;
+
+    return this._makeRequest(fullUrl, {
+      method: "GET",
+    });
+  }
+
+  async post(url, data = {}) {
+    return this._makeRequest(url, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async put(url, data = {}) {
+    return this._makeRequest(url, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async delete(url) {
+    return this._makeRequest(url, {
+      method: "DELETE",
+    });
+  }
+
+  // ===== AUTHENTICATION API =====
+
+  /**
+   * Đăng ký tài khoản
+   */
+  async register(userData) {
+    return this.post(API_ENDPOINTS.AUTH.REGISTER, userData);
+  }
+
+  /**
+   * Đăng nhập
+   */
+  async login(credentials) {
+    return this.post(API_ENDPOINTS.AUTH.LOGIN, credentials);
+  }
+
+  // ===== USER API =====
+
+  /**
+   * Lấy thông tin user hiện tại - Cần authentication
+   */
+  async getProfile() {
+    if (!this._hasAuthToken()) {
+      throw new Error("Authentication required");
+    }
+    return this.get(API_ENDPOINTS.USER.PROFILE);
+  }
+
+  // ===== PLAYLISTS API (Today's biggest hits) =====
+
+  /**
+   * Lấy tất cả playlists
+   */
+  async getAllPlaylists(limit = 20, offset = 0) {
+    const params = new URLSearchParams({
+      limit: limit.toString(),
+      offset: offset.toString(),
+    });
+    return this.get(`${API_ENDPOINTS.PLAYLISTS.GET_ALL}?${params}`);
+  }
+
+  /**
+   * Lấy playlist theo ID
+   */
+  async getPlaylistById(id) {
+    return this.get(`${API_ENDPOINTS.PLAYLISTS.GET_BY_ID}/${id}`);
+  }
+
+  /**
+   * Lấy playlists của user hiện tại - Cần authentication
+   */
+  async getMyPlaylists(limit = 20, offset = 0) {
+    if (!this._hasAuthToken()) {
+      throw new Error("Authentication required");
     }
 
-    /**
-     * Thực hiện HTTP request với retry logic
-     */
-    async makeRequest(endpoint, options = {}, retryCount = 0) {
-        try {
-            const url = `${this.baseURL}${endpoint}`;
-            const config = {
-                method: options.method || HTTP_METHODS.GET,
-                headers: this.createHeaders(options.includeAuth !== false),
-                ...options
-            };
+    const params = new URLSearchParams({
+      limit: limit.toString(),
+      offset: offset.toString(),
+    });
+    return this.get(`${API_ENDPOINTS.ME.PLAYLISTS}?${params}`);
+  }
 
-            // Xử lý body
-            if (options.body && typeof options.body === 'object') {
-                config.body = JSON.stringify(options.body);
-            }
+  // ===== ARTISTS API (Popular artists) =====
 
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+  /**
+   * Lấy tất cả artists
+   */
+  async getAllArtists(limit = 20, offset = 0) {
+    const params = new URLSearchParams({
+      limit: limit.toString(),
+      offset: offset.toString(),
+    });
+    return this.get(`${API_ENDPOINTS.ARTISTS.GET_ALL}?${params}`);
+  }
 
-            const response = await fetch(url, {
-                ...config,
-                signal: controller.signal
-            });
-
-            clearTimeout(timeoutId);
-            return await this.handleResponse(response);
-
-        } catch (error) {
-            if (error.name === 'AbortError') {
-                throw new Error(MESSAGES.ERROR.NETWORK_ERROR);
-            }
-
-            if (retryCount < this.maxRetries) {
-                console.log(`Retry attempt ${retryCount + 1} for ${endpoint}`);
-                return this.makeRequest(endpoint, options, retryCount + 1);
-            }
-
-            throw error;
-        }
-    }
-
-    /**
-     * GET request
-     */
-    async get(endpoint, options = {}) {
-        return this.makeRequest(endpoint, { ...options, method: HTTP_METHODS.GET });
-    }
-
-    /**
-     * POST request
-     */
-    async post(endpoint, data = {}, options = {}) {
-        return this.makeRequest(endpoint, { 
-            ...options, 
-            method: HTTP_METHODS.POST, 
-            body: data 
-        });
-    }
-
-    /**
-     * PUT request
-     */
-    async put(endpoint, data = {}, options = {}) {
-        return this.makeRequest(endpoint, { 
-            ...options, 
-            method: HTTP_METHODS.PUT, 
-            body: data 
-        });
-    }
-
-    /**
-     * DELETE request
-     */
-    async delete(endpoint, options = {}) {
-        return this.makeRequest(endpoint, { ...options, method: HTTP_METHODS.DELETE });
-    }
-
-    /**
-     * Upload file
-     */
-    async uploadFile(endpoint, file, options = {}) {
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const config = {
-            method: HTTP_METHODS.POST,
-            headers: this.createHeaders(options.includeAuth !== false),
-            body: formData,
-            ...options
-        };
-
-        // Không set Content-Type cho FormData
-        delete config.headers['Content-Type'];
-
-        return this.makeRequest(endpoint, config);
-    }
+  /**
+   * Lấy artist theo ID
+   */
+  async getArtistById(id) {
+    return this.get(`${API_ENDPOINTS.ARTISTS.GET_BY_ID}/${id}`);
+  }
 }
 
-// Export instance singleton
+// Export singleton instance
 export const apiService = new ApiService();
-export default apiService; 

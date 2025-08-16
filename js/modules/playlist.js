@@ -1,154 +1,141 @@
 /**
- * Playlist Module
- * Module xử lý tất cả logic liên quan đến playlist
+ * Playlist Service Module
+ * Service xử lý tất cả logic liên quan đến playlists
  */
 
 import { apiService } from "./api.js";
-import { API_ENDPOINTS } from "../constants/api.js";
+import { authService } from "./auth.js";
 import { MESSAGES } from "../constants/messages.js";
-import { uiService } from "./ui.js";
-import { APP_CONFIG } from "../constants/config.js";
 
 class PlaylistService {
   constructor() {
     this.playlists = [];
-    this.currentPlaylist = null;
     this.myPlaylists = [];
+    this.isLoading = false;
     this._init();
   }
 
   /**
    * Khởi tạo service
    */
-  _init() {
-    this._loadAllPlaylists();
-    this._loadMyPlaylists();
-    this._loadFollowedPlaylists();
+  async _init() {
+    try {
+      // Load public playlists trước
+      await this._loadAllPlaylists();
+
+      // Load user-specific playlists nếu đã đăng nhập
+      if (authService.isUserAuthenticated()) {
+        await this._loadMyPlaylists();
+      }
+    } catch (error) {
+      console.error("Error initializing playlist service:", error);
+    }
   }
 
   /**
-   * Load tất cả playlists
+   * Load tất cả playlists (Today's biggest hits)
    */
   async _loadAllPlaylists() {
     try {
-      // TODO: Load tất cả playlist
-      const response = await apiService.get(API_ENDPOINTS.PLAYLISTS.GET_ALL);
-      this.playlists = response.data || [];
+      this.isLoading = true;
+      const response = await apiService.getAllPlaylists(20, 0);
+
+      if (response.success) {
+        this.playlists = response.data || [];
+        console.log(`Loaded ${this.playlists.length} public playlists`);
+      }
     } catch (error) {
-      console.error("Error loading playlists:", error);
+      console.error("Error loading public playlists:", error);
+      this.playlists = [];
+    } finally {
+      this.isLoading = false;
     }
   }
 
   /**
-   * Load playlists của user
+   * Load playlists của user hiện tại - Cần authentication
    */
   async _loadMyPlaylists() {
     try {
-      // TODO: Load playlist của user
-      const response = await apiService.get(
-        API_ENDPOINTS.PLAYLISTS.GET_MY_PLAYLISTS
-      );
-      this.myPlaylists = response.data || [];
+      if (!authService.isUserAuthenticated()) {
+        console.log("User not authenticated, skipping my playlists load");
+        return;
+      }
+
+      this.isLoading = true;
+      const response = await apiService.getMyPlaylists(20, 0);
+
+      if (response.success) {
+        this.myPlaylists = response.data || [];
+        console.log(`Loaded ${this.myPlaylists.length} user playlists`);
+      }
     } catch (error) {
       console.error("Error loading my playlists:", error);
+      this.myPlaylists = [];
+    } finally {
+      this.isLoading = false;
     }
   }
 
   /**
-   * Load playlists của user
+   * Refresh playlists
    */
-  async _loadFollowedPlaylists() {
-    try {
-      // TODO: Load playlist đã theo dõi
-      const response = await apiService.get(
-        API_ENDPOINTS.PLAYLISTS.GET_MY_PLAYLISTS
-      );
-      this.myPlaylists = response.data || [];
-    } catch (error) {
-      console.error("Error loading my playlists:", error);
+  async refreshPlaylists() {
+    await this._loadAllPlaylists();
+    if (authService.isUserAuthenticated()) {
+      await this._loadMyPlaylists();
     }
   }
 
-  /**
-   * Tạo playlist mới
-   */
-  async createMyPlaylist(
-    name = APP_CONFIG.DEFAULTS.PLAYLIST_NAME,
-    description = ""
-  ) {
-    try {
-      // TODO: Tạo playlist mới
-    } catch (error) {
-      console.error("Error creating playlist:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Cập nhật playlist
-   */
-  async updateMyPlaylist(playlistId, data) {
-    try {
-      // TODO: Cập nhật playlist
-    } catch (error) {
-      console.error("Error updating playlist:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Xóa playlist
-   */
-  async deleteMyPlaylist(playlistId) {
-    try {
-      // Xóa playlist
-    } catch (error) {
-      console.error("Error deleting playlist:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Upload ảnh cho playlist
-   */
-  async uploadPlaylistImage(playlistId, file) {
-    try {
-      // TODO: Upload ảnh playlist
-    } catch (error) {
-      console.error("Error uploading image:", error);
-      throw error;
-    }
-  }
+  // ===== PUBLIC METHODS =====
 
   /**
    * Lấy playlist theo ID
    */
-  getPlaylistById(playlistId) {
-    // TODO
+  getPlaylistById(id) {
+    // Tìm trong tất cả danh sách
+    let playlist = this.playlists.find((playlist) => playlist.id === id);
+    if (!playlist) {
+      playlist = this.myPlaylists.find((playlist) => playlist.id === id);
+    }
+    return playlist;
   }
 
   /**
-   * Lấy tất cả playlist
+   * Lấy tất cả playlists (public)
    */
   getAllPlaylists() {
-    // TODO
+    return this.playlists;
   }
 
   /**
-   * Lấy playlists của user
+   * Lấy playlists của user hiện tại
    */
   getMyPlaylists() {
-    // TODO
+    return this.myPlaylists;
   }
 
   /**
-   * Lấy followed playlists
+   * Kiểm tra đang loading
    */
-  getFollowedPlaylists() {
-    // TODO
+  getIsLoading() {
+    return this.isLoading;
+  }
+
+  /**
+   * Lấy tổng số playlists
+   */
+  getTotalPlaylistsCount() {
+    return this.playlists.length + this.myPlaylists.length;
+  }
+
+  /**
+   * Kiểm tra user đã đăng nhập chưa
+   */
+  _isUserAuthenticated() {
+    return authService.isUserAuthenticated();
   }
 }
 
-// Export instance singleton
+// Export singleton instance
 export const playlistService = new PlaylistService();
-export default playlistService;

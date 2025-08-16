@@ -1,48 +1,55 @@
 /**
- * API Endpoints Constants
- * Chứa tất cả các endpoint API được sử dụng trong dự án
+ * API Endpoints Configuration
+ * Cấu hình các endpoint API
  */
-
-export const API_BASE_URL = "https://api.example.com";
 
 export const API_ENDPOINTS = {
   // Authentication
   AUTH: {
-    REGISTER: "/auth/register",
-    LOGIN: "/auth/login",
-    LOGOUT: "/auth/logout",
-    VERIFY: "/auth/verify",
+    REGISTER: "https://spotify.f8team.dev/api/auth/register",
+    LOGIN: "https://spotify.f8team.dev/api/auth/login",
+  },
+
+  // User Management
+  USER: {
+    ME: "https://spotify.f8team.dev/api/users/me",
+    PROFILE: "https://spotify.f8team.dev/api/users/me",
+  },
+
+  // User Library
+  ME: {
+    PLAYLISTS: "https://spotify.f8team.dev/api/me/playlists",
   },
 
   // Playlists
   PLAYLISTS: {
-    GET_ALL: "/playlists/get-all",
-    GET_BY_ID: "/playlists/get-playlist-by-id",
-    CREATE: "/playlists/create-playlist",
-    UPDATE: "/playlists/update-playlist",
-    DELETE: "/playlists/delete-playlist",
-    FOLLOW: "/playlists/follow-playlist",
-    UNFOLLOW: "/playlists/unfollow-playlist",
-    GET_MY_PLAYLISTS: "/playlists/get-my-playlists",
+    GET_ALL: "https://spotify.f8team.dev/api/playlists",
+    GET_BY_ID: "https://spotify.f8team.dev/api/playlists",
   },
 
   // Artists
   ARTISTS: {
-    GET_ALL: "/artists/get-all-artists",
-    GET_BY_ID: "/artists/get-artist-by-id",
-    FOLLOW: "/artists/follow-artist",
-    UNFOLLOW: "/artists/unfollow-artist",
+    GET_ALL: "https://spotify.f8team.dev/api/artists",
+    GET_BY_ID: "https://spotify.f8team.dev/api/artists",
   },
 
-  // Upload
-  UPLOAD: {
-    IMAGE: "/upload/image",
+  // HTTP Methods
+  HTTP_METHODS: {
+    GET: "GET",
+    POST: "POST",
+    PUT: "PUT",
+    DELETE: "DELETE",
+    PATCH: "PATCH",
   },
-};
 
-export const HTTP_METHODS = {
-  GET: "GET",
-  POST: "POST",
-  PUT: "PUT",
-  DELETE: "DELETE",
+  // Status Codes
+  STATUS_CODES: {
+    OK: 200,
+    CREATED: 201,
+    BAD_REQUEST: 400,
+    UNAUTHORIZED: 401,
+    FORBIDDEN: 403,
+    NOT_FOUND: 404,
+    INTERNAL_SERVER_ERROR: 500,
+  },
 };
