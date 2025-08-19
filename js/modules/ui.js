@@ -27,6 +27,7 @@ class UIService {
     this._setupUserMenuEvents();
     this._setupGlobalEvents();
     this._setupHomeNavigation();
+    this._setupCommonEvents();
 
     // Render Home page sau khi DOM đã sẵn sàng
     setTimeout(() => {
@@ -1113,11 +1114,136 @@ class UIService {
   }
 
   /**
+   * Hiển thị home
+   */
+  _showHome() {
+    const homeContainer = document.querySelector(".home-container");
+    homeContainer.classList.remove("hide");
+  }
+  /**
+   * Ẩn home
+   */
+  _hideHome() {
+    const homeContainer = document.querySelector(".home-container");
+    homeContainer.classList.add("hide");
+  }
+
+  _setDetailContent(data) {
+    const detailContainer = document.querySelector(".detail-container");
+    const html = `
+    <!-- Artist Hero Section -->
+            <section class="artist-hero">
+              <div class="hero-background">
+                <img
+                  src=${
+                    data.background_image_url
+                      ? data.background_image_url
+                      : "./assets/images/playlist-hero.jpg"
+                  }
+                  alt="background"
+                  class="hero-image"
+                />
+                <div class="hero-overlay"></div>
+              </div>
+              <div class="hero-content">
+                ${
+                  data.is_verified && data.is_verified === true
+                    ? `<div class="verified-badge">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Verified Artist</span>
+                  </div>`
+                    : ""
+                }
+                <h1 class="artist-name">${data.name}</h1>
+                <p class="monthly-listeners">${
+                  data.monthly_listeners
+                    ? data.monthly_listeners.toLocaleString("en-US") +
+                      " monthly listeners"
+                    : ""
+                }</p>
+              </div>
+            </section>
+
+            <!-- Artist Controls -->
+            <section class="artist-controls">
+              <button data-label="tooltip" class="play-btn-large">
+                <i class="fas fa-play"></i>
+              </button>
+            </section>
+
+            <!-- Popular Tracks -->
+            <section class="popular-section">
+              <h2 class="section-title">Popular</h2>
+              <div class="track-list">
+                <div class="track-item">
+                  <div class="track-number">1</div>
+                  <div class="track-image">
+                    <img
+                      src="placeholder.svg?height=40&width=40"
+                      alt="Cho Tôi Lang Thang"
+                    />
+                  </div>
+                  <div class="track-info">
+                    <div class="track-name">Cho Tôi Lang Thang</div>
+                  </div>
+                  <div class="track-plays">27,498,341</div>
+                  <div class="track-duration">4:18</div>
+                  <button data-label="tooltip" class="track-menu-btn">
+                    <i class="fas fa-ellipsis-h"></i>
+                  </button>
+                </div>
+
+                <div class="track-item playing">
+                  <div class="track-number">
+                    <i class="fas fa-volume-up playing-icon"></i>
+                  </div>
+                  <div class="track-image">
+                    <img
+                      src="placeholder.svg?height=40&width=40"
+                      alt="Lối Nhỏ"
+                    />
+                  </div>
+                  <div class="track-info">
+                    <div class="track-name playing-text">Lối Nhỏ</div>
+                  </div>
+                  <div class="track-plays">45,686,866</div>
+                  <div class="track-duration">4:12</div>
+                  <button data-label="tooltip" class="track-menu-btn">
+                    <i class="fas fa-ellipsis-h"></i>
+                  </button>
+                </div>
+
+                <div class="track-item">
+                  <div class="track-number">3</div>
+                  <div class="track-image">
+                    <img
+                      src="placeholder.svg?height=40&width=40"
+                      alt="Cho Minh Em"
+                    />
+                  </div>
+                  <div class="track-info">
+                    <div class="track-name">Cho Minh Em</div>
+                  </div>
+                  <div class="track-plays">20,039,024</div>
+                  <div class="track-duration">3:26</div>
+                  <button data-label="tooltip" class="track-menu-btn">
+                    <i class="fas fa-ellipsis-h"></i>
+                  </button>
+                </div>
+              </div>
+            </section>
+    `;
+    detailContainer.innerHTML = html;
+  }
+
+  /**
    * Xử lý click vào playlist
    */
   _handlePlaylistClick(playlist) {
     console.log("Playlist clicked:", playlist);
-    // TODO: Implement playlist detail page or play functionality
+    this._setDetailContent(playlist);
+    this._hideHome();
+    //TODO: Hiển thị popular track
     this.showToast(
       `Đang mở playlist: ${playlist.name || playlist.title}`,
       "info"
@@ -1129,7 +1255,9 @@ class UIService {
    */
   _handleArtistClick(artist) {
     console.log("Artist clicked:", artist);
-    // TODO: Implement artist detail page
+    this._setDetailContent(artist);
+    this._hideHome();
+    //TODO: Hiển thị popular track
     this.showToast(
       `Đang mở trang nghệ sĩ: ${artist.name || artist.display_name}`,
       "info"
@@ -1290,6 +1418,13 @@ class UIService {
       window.removeEventListener("resize", handleResize);
       clearTimeout(resizeTimeout);
     };
+  }
+
+  _setupCommonEvents() {
+    const logo = document.querySelector(".logo > i");
+    const homeBtn = document.querySelector(".home-btn");
+    logo.addEventListener("click", this._showHome);
+    homeBtn.addEventListener("click", this._showHome);
   }
 }
 
