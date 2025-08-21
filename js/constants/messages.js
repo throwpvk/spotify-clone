@@ -90,23 +90,3 @@ export const MESSAGES = {
     NO_MUSIC_FOUND: "Không tìm thấy nhạc",
   },
 };
-
-export const TOOLTIPS = {
-  PLAY: "Phát",
-  PAUSE: "Tạm dừng",
-  NEXT: "Bài tiếp theo",
-  PREVIOUS: "Bài trước",
-  SHUFFLE: "Phát ngẫu nhiên",
-  REPEAT: "Lặp lại",
-  VOLUME: "Âm lượng",
-  MUTE: "Tắt tiếng",
-  FOLLOW: "Follow",
-  UNFOLLOW: "Unfollow",
-  LIKE: "Thích",
-  DISLIKE: "Bỏ thích",
-  ADD_TO_PLAYLIST: "Thêm vào playlist",
-  REMOVE_FROM_PLAYLIST: "Xóa khỏi playlist",
-  CREATE_PLAYLIST: "Tạo playlist mới",
-  EDIT_PLAYLIST: "Chỉnh sửa playlist",
-  DELETE_PLAYLIST: "Xóa playlist",
-};

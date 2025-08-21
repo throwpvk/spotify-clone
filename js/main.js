@@ -2,10 +2,13 @@
  * Main Application Entry Point
  */
 
-import { uiService } from "./modules/ui.js";
+import { contentService } from "./modules/content.js";
 import { authService } from "./modules/auth.js";
-import { playlistService } from "./modules/playlist.js";
-import { homeService } from "./modules/home.js";
+import { uiService } from "./modules/ui.js";
+import { apiService } from "./modules/api.js";
+import { homeRenderer } from "./modules/home-renderer.js";
+import { authUI } from "./modules/auth-ui.js";
+import { libraryRenderer } from "./modules/library-renderer.js";
 
 class SpotifyApp {
   constructor() {
@@ -18,11 +21,14 @@ class SpotifyApp {
    */
   _init() {
     try {
-      // Khởi tạo các services cần thiết
-      this.services.set("ui", uiService);
+      // Đăng ký các services
+      this.services.set("content", contentService);
       this.services.set("auth", authService);
-      this.services.set("playlist", playlistService);
-      this.services.set("home", homeService);
+      this.services.set("ui", uiService);
+      this.services.set("api", apiService);
+      this.services.set("homeRenderer", homeRenderer);
+      this.services.set("authUI", authUI);
+      this.services.set("libraryRenderer", libraryRenderer);
 
       console.log("Spotify Clone App initialized successfully!");
     } catch (error) {
@@ -40,9 +46,9 @@ class SpotifyApp {
   /**
    * Lấy tất cả services
    */
-  getAllServices() {
-    return Object.fromEntries(this.services);
-  }
+  // getAllServices() {
+  //   return Object.fromEntries(this.services);
+  // }
 }
 
 // Khởi tạo ứng dụng khi DOM đã sẵn sàng

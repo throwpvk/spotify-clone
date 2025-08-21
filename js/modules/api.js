@@ -3,7 +3,7 @@
  * Service xử lý tất cả HTTP requests đến API
  */
 
-import { API_ENDPOINTS, APP_CONFIG } from "../constants/index.js";
+import { API, APP_CONFIG } from "../constants/index.js";
 
 class ApiService {
   constructor() {
@@ -12,7 +12,7 @@ class ApiService {
     this.retryAttempts = APP_CONFIG.API.RETRY_ATTEMPTS;
   }
 
-  // ===== CORE REQUEST METHODS =====
+  // ===== REQUEST METHODS =====
 
   /**
    * Thực hiện HTTP request
@@ -113,15 +113,9 @@ class ApiService {
    */
   _getAuthHeaders() {
     const token = this._getAuthToken();
-
     if (token) {
-      console.log(
-        "Adding auth header with token:",
-        `${token.substring(0, 20)}...`
-      );
       return { Authorization: `Bearer ${token}` };
     }
-
     return {};
   }
 
@@ -189,14 +183,14 @@ class ApiService {
    * Đăng ký tài khoản
    */
   async register(userData) {
-    return this.post(API_ENDPOINTS.AUTH.REGISTER, userData);
+    return this.post(this.baseURL + API.AUTH.REGISTER, userData);
   }
 
   /**
    * Đăng nhập
    */
   async login(credentials) {
-    return this.post(API_ENDPOINTS.AUTH.LOGIN, credentials);
+    return this.post(this.baseURL + API.AUTH.LOGIN, credentials);
   }
 
   // ===== USER API =====
@@ -208,7 +202,7 @@ class ApiService {
     if (!this._hasAuthToken()) {
       throw new Error("Authentication required");
     }
-    return this.get(API_ENDPOINTS.USER.PROFILE);
+    return this.get(this.baseURL + API.USER.PROFILE);
   }
 
   // ===== PLAYLISTS API (Today's biggest hits) =====
@@ -221,30 +215,39 @@ class ApiService {
       limit: limit.toString(),
       offset: offset.toString(),
     });
-    return this.get(`${API_ENDPOINTS.PLAYLISTS.GET_ALL}?${params}`);
+    return this.get(`${this.baseURL + API.PLAYLISTS.GET_ALL}?${params}`);
   }
 
   /**
    * Lấy playlist theo ID
    */
-  async getPlaylistById(id) {
-    return this.get(`${API_ENDPOINTS.PLAYLISTS.GET_BY_ID}/${id}`);
+  // async getPlaylistById(id) {
+  //   return this.get(`${this.baseURL + API.PLAYLISTS.GET_BY_ID}/${id}`);
+  // }
+
+  /**
+   * Lấy All Tracks của Playlist theo Playlist ID
+   */
+  async getPlaylistAllTracksById(id) {
+    return this.get(
+      `${this.baseURL + API.PLAYLISTS.GET_ALL_TRACKS_BY_ID}/${id}/tracks`
+    );
   }
 
   /**
    * Lấy playlists của user hiện tại - Cần authentication
    */
-  async getMyPlaylists(limit = 20, offset = 0) {
-    if (!this._hasAuthToken()) {
-      throw new Error("Authentication required");
-    }
+  // async getMyPlaylists(limit = 20, offset = 0) {
+  //   if (!this._hasAuthToken()) {
+  //     throw new Error("Authentication required");
+  //   }
 
-    const params = new URLSearchParams({
-      limit: limit.toString(),
-      offset: offset.toString(),
-    });
-    return this.get(`${API_ENDPOINTS.ME.PLAYLISTS}?${params}`);
-  }
+  //   const params = new URLSearchParams({
+  //     limit: limit.toString(),
+  //     offset: offset.toString(),
+  //   });
+  //   return this.get(`${this.baseURL + API.ME.PLAYLISTS}?${params}`);
+  // }
 
   // ===== ARTISTS API (Popular artists) =====
 
@@ -256,14 +259,137 @@ class ApiService {
       limit: limit.toString(),
       offset: offset.toString(),
     });
-    return this.get(`${API_ENDPOINTS.ARTISTS.GET_ALL}?${params}`);
+    return this.get(`${this.baseURL + API.ARTISTS.GET_ALL}?${params}`);
   }
 
   /**
    * Lấy artist theo ID
    */
-  async getArtistById(id) {
-    return this.get(`${API_ENDPOINTS.ARTISTS.GET_BY_ID}/${id}`);
+  // async getArtistById(id) {
+  //   return this.get(`${this.baseURL + API.ARTISTS.GET_BY_ID}/${id}`);
+  // }
+  /**
+   * Lấy Popular Tracks của Artist theo Artist ID
+   */
+  async getArtistAllTracksById(id) {
+    return this.get(
+      `${this.baseURL + API.ARTISTS.GET_ALL_TRACKS_BY_ID}/${id}/tracks/popular`
+    );
+  }
+
+  /**
+   * Lấy liked tracks của user hiện tại - Cần authentication
+   */
+  async getLikedTracks(limit = 50, offset = 0) {
+    if (!this._hasAuthToken()) {
+      throw new Error("Authentication required");
+    }
+
+    const params = new URLSearchParams({
+      limit: limit.toString(),
+      offset: offset.toString(),
+    });
+    return this.get(`${this.baseURL + API.AUTH.GET_LIKED_TRACKS}?${params}`);
+  }
+
+  /**
+   * Lấy followed playlists của user hiện tại - Cần authentication
+   */
+  async getFollowedPlaylists(limit = 50, offset = 0) {
+    if (!this._hasAuthToken()) {
+      throw new Error("Authentication required");
+    }
+
+    const params = new URLSearchParams({
+      limit: limit.toString(),
+      offset: offset.toString(),
+    });
+    return this.get(
+      `${this.baseURL + API.AUTH.GET_FOLLOWED_PLAYLISTS}?${params}`
+    );
+  }
+
+  /**
+   * Lấy followed artists của user hiện tại - Cần authentication
+   */
+  async getFollowedArtists(limit = 50, offset = 0) {
+    if (!this._hasAuthToken()) {
+      throw new Error("Authentication required");
+    }
+
+    const params = new URLSearchParams({
+      limit: limit.toString(),
+      offset: offset.toString(),
+    });
+    return this.get(
+      `${this.baseURL + API.AUTH.GET_FOLLOWED_ARTISTS}?${params}`
+    );
+  }
+
+  /**
+   * Follow playlist - Cần authentication
+   */
+  async followPlaylist(playlistId) {
+    if (!this._hasAuthToken()) {
+      throw new Error("Authentication required");
+    }
+
+    return this.post(`${this.baseURL}/playlists/${playlistId}/follow`);
+  }
+
+  /**
+   * Unfollow playlist - Cần authentication
+   */
+  async unfollowPlaylist(playlistId) {
+    if (!this._hasAuthToken()) {
+      throw new Error("Authentication required");
+    }
+
+    return this.delete(`${this.baseURL}/playlists/${playlistId}/follow`);
+  }
+
+  /**
+   * Follow artist - Cần authentication
+   */
+  async followArtist(artistId) {
+    if (!this._hasAuthToken()) {
+      throw new Error("Authentication required");
+    }
+
+    return this.post(`${this.baseURL}/artists/${artistId}/follow`);
+  }
+
+  /**
+   * Unfollow artist - Cần authentication
+   */
+  async unfollowArtist(artistId) {
+    if (!this._hasAuthToken()) {
+      throw new Error("Authentication required");
+    }
+
+    return this.delete(`${this.baseURL}/artists/${artistId}/follow`);
+  }
+
+  /**
+   * Like track - Cần authentication
+   */
+  async likeTrack(trackId) {
+    if (!this._hasAuthToken()) {
+      throw new Error("Authentication required");
+    }
+
+    return this.post(`${this.baseURL}/tracks/${trackId}/like`);
+  }
+
+  /**
+   * Unlike track - Cần authentication
+   */
+  async unlikeTrack(trackId) {
+    if (!this._hasAuthToken()) {
+      throw new Error("Authentication required");
+    }
+
+    return this.delete(`${this.baseURL}/tracks/${trackId}/like`);
   }
 }
 

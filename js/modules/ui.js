@@ -1,6 +1,6 @@
 /**
- * UI Module
- * Module xử lý tất cả các component UI như modal, toast, tooltip, filter, search
+ * UI Service Module
+ * Service xử lý các UI components cơ bản: modal, toast, context menu, form validation
  */
 
 import { APP_CONFIG } from "../constants/config.js";
@@ -21,18 +21,9 @@ class UIService {
   _init() {
     this._disableContextMenu();
     this._disableUserSelect();
-    this._setupLibraryFilterEvents();
-    this._setupContextMenu();
-    this._setupAuthModalEvents();
-    this._setupUserMenuEvents();
+    this.setupContextMenu();
     this._setupGlobalEvents();
-    this._setupHomeNavigation();
-    this._setupCommonEvents();
-
-    // Render Home page sau khi DOM đã sẵn sàng
-    setTimeout(() => {
-      this.renderHomePage();
-    }, 1000); // Delay 1 giây để đảm bảo các service khác đã khởi tạo
+    this._setupLibraryFilterEvents();
   }
 
   /**
@@ -55,234 +46,6 @@ class UIService {
   }
 
   /**
-   * Thiết lập auth modal events
-   */
-  _setupAuthModalEvents() {
-    const signupBtn = document.querySelector(".signup-btn");
-    const loginBtn = document.querySelector(".login-btn");
-    const authModal = document.getElementById("authModal");
-    const modalClose = document.getElementById("modalClose");
-    const signupForm = document.getElementById("signupForm");
-    const loginForm = document.getElementById("loginForm");
-    const showLoginBtn = document.getElementById("showLogin");
-    const showSignupBtn = document.getElementById("showSignup");
-
-    if (signupBtn) {
-      signupBtn.addEventListener("click", () => {
-        this._showSignupForm();
-        this.openModal("authModal");
-      });
-    }
-
-    if (loginBtn) {
-      loginBtn.addEventListener("click", () => {
-        this._showLoginForm();
-        this.openModal("authModal");
-      });
-    }
-
-    if (modalClose) {
-      modalClose.addEventListener("click", () => {
-        this.closeModalById("authModal");
-      });
-    }
-
-    if (showLoginBtn) {
-      showLoginBtn.addEventListener("click", () => {
-        this._showLoginForm();
-      });
-    }
-
-    if (showSignupBtn) {
-      showSignupBtn.addEventListener("click", () => {
-        this._showSignupForm();
-      });
-    }
-
-    // Form submit events sẽ được xử lý bởi auth service
-    if (signupForm) {
-      signupForm.addEventListener("submit", (e) => {
-        this._handleAuthFormSubmit(e, "signup");
-      });
-
-      // Thêm real-time validation cho signup form
-      this._setupFormValidation(signupForm, "signup");
-    }
-
-    if (loginForm) {
-      loginForm.addEventListener("submit", (e) => {
-        this._handleAuthFormSubmit(e, "login");
-      });
-
-      // Thêm real-time validation cho login form
-      this._setupFormValidation(loginForm, "login");
-    }
-  }
-
-  /**
-   * Thiết lập validation real-time cho form
-   */
-  _setupFormValidation(form, formType) {
-    const inputs = form.querySelectorAll("input");
-
-    inputs.forEach((input) => {
-      // Validation khi user nhập
-      input.addEventListener("input", () => {
-        this._validateInput(input, formType);
-      });
-
-      // Validation khi user rời khỏi input
-      input.addEventListener("blur", () => {
-        this._validateInput(input, formType);
-      });
-
-      // Validation khi user focus vào input
-      input.addEventListener("focus", () => {
-        this._clearInputError(input);
-      });
-    });
-  }
-
-  /**
-   * Validation cho từng input
-   */
-  _validateInput(input, formType) {
-    const value = input.value.trim();
-    const fieldName = input.name;
-    let isValid = true;
-    let errorMessage = "";
-
-    // Validation theo từng field
-    switch (fieldName) {
-      case "username":
-        if (formType === "signup") {
-          if (!value) {
-            isValid = false;
-            errorMessage = "Vui lòng nhập tên người dùng";
-          } else if (value.length < APP_CONFIG.VALIDATION.USERNAME_MIN_LENGTH) {
-            isValid = false;
-            errorMessage = `Tên người dùng phải có ít nhất ${APP_CONFIG.VALIDATION.USERNAME_MIN_LENGTH} ký tự`;
-          } else if (value.length > APP_CONFIG.VALIDATION.USERNAME_MAX_LENGTH) {
-            isValid = false;
-            errorMessage = `Tên người dùng không được quá ${APP_CONFIG.VALIDATION.USERNAME_MAX_LENGTH} ký tự`;
-          } else if (!APP_CONFIG.VALIDATION.USERNAME_REGEX.test(value)) {
-            isValid = false;
-            errorMessage =
-              "Tên người dùng chỉ được chứa chữ cái, số và dấu gạch dưới";
-          }
-        }
-        break;
-
-      case "email":
-        if (!value) {
-          isValid = false;
-          errorMessage = "Vui lòng nhập email";
-        } else if (!APP_CONFIG.VALIDATION.EMAIL_REGEX.test(value)) {
-          isValid = false;
-          errorMessage = "Vui lòng nhập email hợp lệ";
-        }
-        break;
-
-      case "password":
-        if (!value) {
-          isValid = false;
-          errorMessage = "Vui lòng nhập mật khẩu";
-        } else if (value.length < APP_CONFIG.VALIDATION.PASSWORD_MIN_LENGTH) {
-          isValid = false;
-          errorMessage = `Mật khẩu phải có ít nhất ${APP_CONFIG.VALIDATION.PASSWORD_MIN_LENGTH} ký tự`;
-        } else if (!APP_CONFIG.VALIDATION.PASSWORD_REGEX.test(value)) {
-          isValid = false;
-          errorMessage = "Mật khẩu phải bao gồm chữ hoa, chữ thường và số";
-        }
-        break;
-    }
-
-    // Hiển thị hoặc ẩn error message
-    if (!isValid) {
-      this._showInputError(input, errorMessage);
-    } else {
-      this._clearInputError(input);
-    }
-
-    return isValid;
-  }
-
-  /**
-   * Hiển thị error cho input
-   */
-  _showInputError(input, message) {
-    const formGroup = input.closest(".form-group");
-    const errorElement = formGroup.querySelector(".error-message");
-
-    if (errorElement) {
-      errorElement.querySelector("span").textContent = message;
-      errorElement.style.display = "flex";
-      formGroup.classList.add("invalid");
-    }
-  }
-
-  /**
-   * Ẩn error cho input
-   */
-  _clearInputError(input) {
-    const formGroup = input.closest(".form-group");
-    const errorElement = formGroup.querySelector(".error-message");
-
-    if (errorElement) {
-      errorElement.style.display = "none";
-      formGroup.classList.remove("invalid");
-    }
-  }
-
-  /**
-   * Validation toàn bộ form trước khi submit
-   */
-  _validateForm(form, formType) {
-    const inputs = form.querySelectorAll("input");
-    let isValid = true;
-
-    inputs.forEach((input) => {
-      if (!this._validateInput(input, formType)) {
-        isValid = false;
-      }
-    });
-
-    return isValid;
-  }
-
-  /**
-   * Thiết lập user menu events
-   */
-  _setupUserMenuEvents() {
-    const userAvatar = document.getElementById("userAvatar");
-    const logoutBtn = document.getElementById("logoutBtn");
-
-    if (userAvatar) {
-      userAvatar.addEventListener("click", (e) => {
-        e.stopPropagation();
-        this._toggleUserDropdown();
-      });
-    }
-
-    if (logoutBtn) {
-      logoutBtn.addEventListener("click", () => {
-        // Gọi auth service để logout
-        if (window.spotifyApp && window.spotifyApp.getService) {
-          const authService = window.spotifyApp.getService("auth");
-          if (authService) {
-            authService.logout();
-          }
-        }
-      });
-    }
-
-    // Close dropdown khi click outside
-    document.addEventListener("click", () => {
-      this._hideUserDropdown();
-    });
-  }
-
-  /**
    * Thiết lập global events
    */
   _setupGlobalEvents() {
@@ -302,290 +65,9 @@ class UIService {
   }
 
   /**
-   * Xử lý submit form authentication
-   */
-  _handleAuthFormSubmit(e, formType) {
-    e.preventDefault();
-
-    const form = e.target;
-
-    // Validation form trước khi submit
-    if (!this._validateForm(form, formType)) {
-      return; // Không submit nếu form không hợp lệ
-    }
-
-    const formData = new FormData(form);
-
-    if (formType === "signup") {
-      const userData = {
-        username: formData.get("username"),
-        email: formData.get("email"),
-        password: formData.get("password"),
-      };
-
-      // Gọi auth service để đăng ký
-      if (window.spotifyApp && window.spotifyApp.getService) {
-        const authService = window.spotifyApp.getService("auth");
-        if (authService) {
-          authService
-            .register(userData)
-            .then(() => {
-              this.closeModalById("authModal");
-              form.reset();
-              // Reset tất cả error messages
-              this._resetFormErrors(form);
-            })
-            .catch((error) => {
-              console.error("Signup error:", error);
-              // Không cần hiển thị error ở đây vì auth service đã xử lý
-            });
-        }
-      }
-    } else if (formType === "login") {
-      const credentials = {
-        email: formData.get("email"),
-        password: formData.get("password"),
-      };
-
-      // Gọi auth service để đăng nhập
-      if (window.spotifyApp && window.spotifyApp.getService) {
-        const authService = window.spotifyApp.getService("auth");
-        if (authService) {
-          authService
-            .login(credentials)
-            .then(() => {
-              this.closeModalById("authModal");
-              form.reset();
-              // Reset tất cả error messages
-              this._resetFormErrors(form);
-            })
-            .catch((error) => {
-              console.error("Login error:", error);
-              // Không cần hiển thị error ở đây vì auth service đã xử lý
-            });
-        }
-      }
-    }
-  }
-
-  /**
-   * Reset tất cả error messages trong form
-   */
-  _resetFormErrors(form) {
-    const inputs = form.querySelectorAll("input");
-    inputs.forEach((input) => {
-      this._clearInputError(input);
-    });
-  }
-
-  /**
-   * Hiển thị form đăng ký
-   */
-  _showSignupForm() {
-    const signupForm = document.getElementById("signupForm");
-    const loginForm = document.getElementById("loginForm");
-
-    if (signupForm && loginForm) {
-      signupForm.style.display = "block";
-      loginForm.style.display = "none";
-    }
-  }
-
-  /**
-   * Hiển thị form đăng nhập
-   */
-  _showLoginForm() {
-    const signupForm = document.getElementById("signupForm");
-    const loginForm = document.getElementById("loginForm");
-
-    if (signupForm && loginForm) {
-      signupForm.style.display = "none";
-      loginForm.style.display = "block";
-    }
-  }
-
-  /**
-   * Toggle user dropdown
-   */
-  _toggleUserDropdown() {
-    const userDropdown = document.getElementById("userDropdown");
-    if (userDropdown) {
-      userDropdown.classList.toggle("show");
-    }
-  }
-
-  /**
-   * Ẩn user dropdown
-   */
-  _hideUserDropdown() {
-    const userDropdown = document.getElementById("userDropdown");
-    if (userDropdown) {
-      userDropdown.classList.remove("show");
-    }
-  }
-
-  /**
-   * Đóng tất cả modals
-   */
-  _closeAllModals() {
-    const modals = document.querySelectorAll(".modal.show");
-    modals.forEach((modal) => {
-      this.closeModal(modal);
-    });
-  }
-
-  /**
-   * Cập nhật UI cho user đã đăng nhập
-   */
-  updateUIForAuthenticatedUser() {
-    // Ẩn nút đăng nhập/đăng ký
-    const authButtons = document.querySelectorAll(".signup-btn, .login-btn");
-    authButtons.forEach((btn) => (btn.style.display = "none"));
-
-    // Hiển thị user info
-    const userInfo = document.querySelector(".user-menu");
-    if (userInfo) {
-      userInfo.style.display = "flex";
-    }
-
-    // Cập nhật avatar và tên
-    if (window.spotifyApp && window.spotifyApp.getService) {
-      const authService = window.spotifyApp.getService("auth");
-      if (authService) {
-        const currentUser = authService.getCurrentUser();
-        if (currentUser) {
-          const userAvatar = document.getElementById("userAvatar");
-          const userName = document.getElementById("userName");
-
-          if (userAvatar && currentUser.avatar) {
-            userAvatar.src = currentUser.avatar;
-          }
-
-          if (userName && currentUser.displayName) {
-            userName.textContent = currentUser.displayName;
-          }
-        }
-      }
-    }
-  }
-
-  /**
-   * Cập nhật UI cho user chưa đăng nhập
-   */
-  updateUIForUnauthenticatedUser() {
-    // Hiển thị nút đăng nhập/đăng ký
-    const authButtons = document.querySelectorAll(".signup-btn, .login-btn");
-    authButtons.forEach((btn) => (btn.style.display = "block"));
-
-    // Ẩn user info
-    const userInfo = document.querySelector(".user-menu");
-    if (userInfo) {
-      userInfo.style.display = "none";
-    }
-  }
-
-  /**
-   * Thêm sự kiện lọc
-   */
-  _setupLibraryFilterEvents() {
-    // Lọc playlists/artists
-    const playlistTab = document.querySelector(".tab-playlist");
-    const artistTab = document.querySelector(".tab-artist");
-    const libraryContent = document.querySelector(".library-content");
-    const searchLibraryBtn = document.querySelector(".search-library-btn");
-    const searchLibraryInput = document.querySelector(".search-library-input");
-    const librarySortBtn = document.querySelector(".sort-btn");
-
-    function filterLibrary(hideType) {
-      const items = libraryContent.querySelectorAll(".library-item");
-      items.forEach((item) => {
-        const type = item.dataset.type?.toLowerCase() || "";
-        item.style.display = type === hideType.toLowerCase() ? "none" : "";
-      });
-    }
-
-    playlistTab.addEventListener("click", () => {
-      artistTab.classList.remove("active");
-      playlistTab.classList.toggle("active");
-
-      if (playlistTab.classList.contains("active")) {
-        filterLibrary("artist");
-      } else {
-        filterLibrary(""); // hiện tất cả
-      }
-    });
-
-    artistTab.addEventListener("click", () => {
-      playlistTab.classList.remove("active");
-      artistTab.classList.toggle("active");
-
-      if (artistTab.classList.contains("active")) {
-        filterLibrary("playlist");
-      } else {
-        filterLibrary(""); // hiện tất cả
-      }
-    });
-
-    searchLibraryBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      searchLibraryBtn.classList.add("active");
-      searchLibraryInput.focus();
-    });
-
-    document.addEventListener("click", (e) => {
-      if (
-        !searchLibraryBtn.contains(e.target) &&
-        !searchLibraryInput.contains(e.target)
-      ) {
-        searchLibraryBtn.classList.remove("active");
-        searchLibraryInput.value = "";
-        if (playlistTab.classList.contains("active")) {
-          filterLibrary("artist");
-        } else if (artistTab.classList.contains("active")) {
-          filterLibrary("playlist");
-        } else {
-          filterLibrary(""); // hiện tất cả
-        }
-      }
-    });
-
-    // Sự kiện nhập vào ô tìm kiếm lọc
-    searchLibraryInput.addEventListener("input", () => {
-      const keyword = searchLibraryInput.value.trim().toLowerCase();
-
-      const items = libraryContent.querySelectorAll(".library-item");
-
-      // Xác định trạng thái hiện tại
-      const isPlaylistActive = playlistTab.classList.contains("active");
-      const isArtistActive = artistTab.classList.contains("active");
-
-      items.forEach((item) => {
-        const type = item.dataset.type?.toLowerCase() || "";
-        const name = item
-          .querySelector(".item-title")
-          .textContent.toLowerCase();
-
-        // Kiểm tra điều kiện lọc theo tab
-        let typeMatch = true;
-        if (isPlaylistActive) {
-          typeMatch = type === "playlist";
-        } else if (isArtistActive) {
-          typeMatch = type === "artist";
-        } // else không filter theo type
-
-        // Kiểm tra keyword có nằm trong text hay không
-        const keywordMatch = name.includes(keyword);
-
-        // Nếu thỏa 2 điều kiện thì show, không thì ẩn
-        item.style.display = typeMatch && keywordMatch ? "" : "none";
-      });
-    });
-  }
-
-  /**
    * Thiết lập context menu
    */
-  _setupContextMenu() {
+  setupContextMenu() {
     // Tạo context menu element
     this._createContextMenu();
 
@@ -893,40 +375,6 @@ class UIService {
   }
 
   /**
-   * Hiển thị loading
-   */
-  showLoading(container, message = "Loading...") {
-    const loading = document.createElement("div");
-    loading.className = "loading";
-    loading.innerHTML = `
-      <div class="loading-spinner"></div>
-      <span>${message}</span>
-    `;
-
-    if (container) {
-      container.appendChild(loading);
-    }
-
-    return loading;
-  }
-
-  /**
-   * Ẩn loading
-   */
-  hideLoading(loadingElement) {
-    if (loadingElement && loadingElement.parentNode) {
-      loadingElement.remove();
-    }
-  }
-
-  /**
-   * Hiển thị toast message (public method)
-   */
-  showToast(message, type = "info") {
-    this._showToast(message, type);
-  }
-
-  /**
    * Đóng modal
    */
   closeModal(modal) {
@@ -939,495 +387,362 @@ class UIService {
     }
   }
 
-  // ===== HOME PAGE RENDERING METHODS =====
-
   /**
-   * Render "Today's biggest hits" section
+   * Đóng tất cả modals
    */
-  renderTodaysHits(playlists) {
-    const container = document.querySelector(".hits-grid");
-    if (!container) {
-      console.warn("Today's hits container (.hits-grid) not found");
-      return;
-    }
-
-    // Clear existing content
-    container.innerHTML = "";
-
-    // Validate playlists là array
-    if (!playlists || !Array.isArray(playlists) || playlists.length === 0) {
-      container.innerHTML = '<p class="no-data">Không có dữ liệu</p>';
-      return;
-    }
-
-    // Create container for cards
-    const cardsContainer = document.createElement("div");
-    cardsContainer.className = "hits-grid-container";
-
-    // Render each playlist
-    playlists.forEach((playlist) => {
-      const playlistCard = this._createPlaylistCard(playlist);
-      cardsContainer.appendChild(playlistCard);
+  _closeAllModals() {
+    const modals = document.querySelectorAll(".modal.show");
+    modals.forEach((modal) => {
+      this.closeModal(modal);
     });
-
-    // Add cards container to main container
-    container.appendChild(cardsContainer);
-
-    // Create navigation buttons
-    const prevBtn = document.createElement("button");
-    prevBtn.className = "hits-nav-btn prev";
-    prevBtn.id = "hitsPrevBtn";
-    prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
-
-    const nextBtn = document.createElement("button");
-    nextBtn.className = "hits-nav-btn next";
-    nextBtn.id = "hitsNextBtn";
-    nextBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
-
-    container.appendChild(prevBtn);
-    container.appendChild(nextBtn);
-
-    // Setup navigation
-    this._setupHomeNavigation();
   }
 
   /**
-   * Render "Popular artists" section
+   * Hiển thị toast message (public method)
    */
-  renderPopularArtists(artists) {
-    const container = document.querySelector(".artists-grid");
-    if (!container) {
-      console.warn("Popular artists container (.artists-grid) not found");
-      return;
-    }
+  showToast(message, type = "info") {
+    this._showToast(message, type);
+  }
 
-    // Clear existing content
-    container.innerHTML = "";
+  /**
+   * Thiết lập form validation
+   */
+  setupFormValidation(form, formType) {
+    const inputs = form.querySelectorAll("input");
 
-    // Validate artists là array
-    if (!artists || !Array.isArray(artists) || artists.length === 0) {
-      container.innerHTML = '<p class="no-data">Không có dữ liệu</p>';
-      return;
-    }
+    inputs.forEach((input) => {
+      // Validation khi user nhập
+      input.addEventListener("input", () => {
+        this._validateInput(input, formType);
+      });
 
-    // Create container for cards
-    const cardsContainer = document.createElement("div");
-    cardsContainer.className = "artists-grid-container";
+      // Validation khi user rời khỏi input
+      input.addEventListener("blur", () => {
+        this._validateInput(input, formType);
+      });
 
-    // Render each artist
-    artists.forEach((artist) => {
-      const artistCard = this._createArtistCard(artist);
-      cardsContainer.appendChild(artistCard);
+      // Validation khi user focus vào input
+      input.addEventListener("focus", () => {
+        this._clearInputError(input);
+      });
     });
-
-    // Add cards container to main container
-    container.appendChild(cardsContainer);
-
-    // Create navigation buttons
-    const prevBtn = document.createElement("button");
-    prevBtn.className = "artists-nav-btn prev";
-    prevBtn.id = "artistsPrevBtn";
-    prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
-
-    const nextBtn = document.createElement("button");
-    nextBtn.className = "artists-nav-btn next";
-    nextBtn.id = "artistsNextBtn";
-    nextBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
-
-    container.appendChild(prevBtn);
-    container.appendChild(nextBtn);
-
-    // Setup navigation
-    this._setupHomeNavigation();
   }
 
   /**
-   * Tạo playlist card element
+   * Validation cho từng input
    */
-  _createPlaylistCard(playlist) {
-    const card = document.createElement("div");
-    card.className = "hit-card";
-    card.setAttribute("data-playlist-id", playlist.id);
+  _validateInput(input, formType) {
+    const value = input.value.trim();
+    const fieldName = input.name;
+    let isValid = true;
+    let errorMessage = "";
 
-    const imageUrl =
-      playlist.image_url ||
-      playlist.cover_image ||
-      "placeholder.svg?height=160&width=160";
-    const title = playlist.name || playlist.title || "Unknown Playlist";
-    const artist =
-      playlist.artist_name || playlist.owner_name || "Unknown Artist";
-
-    card.innerHTML = `
-      <div class="hit-card-cover">
-        <img src="${imageUrl}" alt="${title}" onerror="this.src='placeholder.svg?height=160&width=160'">
-        <button data-label="tooltip" class="hit-play-btn">
-          <i class="fas fa-play"></i>
-        </button>
-      </div>
-      <div class="hit-card-info">
-        <h3 class="hit-card-title">${title}</h3>
-        <p class="hit-card-artist">${artist}</p>
-      </div>
-    `;
-
-    // Add click event
-    card.addEventListener("click", () => {
-      this._handlePlaylistClick(playlist);
-    });
-
-    return card;
-  }
-
-  /**
-   * Tạo artist card element
-   */
-  _createArtistCard(artist) {
-    const card = document.createElement("div");
-    card.className = "artist-card";
-    card.setAttribute("data-artist-id", artist.id);
-
-    const imageUrl =
-      artist.image_url ||
-      artist.avatar_url ||
-      "placeholder.svg?height=160&width=160";
-    const name = artist.name || artist.display_name || "Unknown Artist";
-
-    card.innerHTML = `
-      <div class="artist-card-cover">
-        <img src="${imageUrl}" alt="${name}" onerror="this.src='placeholder.svg?height=160&width=160'">
-        <button data-label="tooltip" class="artist-play-btn">
-          <i class="fas fa-play"></i>
-        </button>
-      </div>
-      <div class="artist-card-info">
-        <h3 class="artist-card-name">${name}</h3>
-        <p class="artist-card-type">Artist</p>
-      </div>
-    `;
-
-    // Add click event
-    card.addEventListener("click", () => {
-      this._handleArtistClick(artist);
-    });
-
-    return card;
-  }
-
-  /**
-   * Hiển thị home
-   */
-  _showHome() {
-    const homeContainer = document.querySelector(".home-container");
-    homeContainer.classList.remove("hide");
-  }
-  /**
-   * Ẩn home
-   */
-  _hideHome() {
-    const homeContainer = document.querySelector(".home-container");
-    homeContainer.classList.add("hide");
-  }
-
-  _setDetailContent(data) {
-    const detailContainer = document.querySelector(".detail-container");
-    const html = `
-    <!-- Artist Hero Section -->
-            <section class="artist-hero">
-              <div class="hero-background">
-                <img
-                  src=${
-                    data.background_image_url
-                      ? data.background_image_url
-                      : "./assets/images/playlist-hero.jpg"
-                  }
-                  alt="background"
-                  class="hero-image"
-                />
-                <div class="hero-overlay"></div>
-              </div>
-              <div class="hero-content">
-                ${
-                  data.is_verified && data.is_verified === true
-                    ? `<div class="verified-badge">
-                    <i class="fas fa-check-circle"></i>
-                    <span>Verified Artist</span>
-                  </div>`
-                    : ""
-                }
-                <h1 class="artist-name">${data.name}</h1>
-                <p class="monthly-listeners">${
-                  data.monthly_listeners
-                    ? data.monthly_listeners.toLocaleString("en-US") +
-                      " monthly listeners"
-                    : ""
-                }</p>
-              </div>
-            </section>
-
-            <!-- Artist Controls -->
-            <section class="artist-controls">
-              <button data-label="tooltip" class="play-btn-large">
-                <i class="fas fa-play"></i>
-              </button>
-            </section>
-
-            <!-- Popular Tracks -->
-            <section class="popular-section">
-              <h2 class="section-title">Popular</h2>
-              <div class="track-list">
-                <div class="track-item">
-                  <div class="track-number">1</div>
-                  <div class="track-image">
-                    <img
-                      src="placeholder.svg?height=40&width=40"
-                      alt="Cho Tôi Lang Thang"
-                    />
-                  </div>
-                  <div class="track-info">
-                    <div class="track-name">Cho Tôi Lang Thang</div>
-                  </div>
-                  <div class="track-plays">27,498,341</div>
-                  <div class="track-duration">4:18</div>
-                  <button data-label="tooltip" class="track-menu-btn">
-                    <i class="fas fa-ellipsis-h"></i>
-                  </button>
-                </div>
-
-                <div class="track-item playing">
-                  <div class="track-number">
-                    <i class="fas fa-volume-up playing-icon"></i>
-                  </div>
-                  <div class="track-image">
-                    <img
-                      src="placeholder.svg?height=40&width=40"
-                      alt="Lối Nhỏ"
-                    />
-                  </div>
-                  <div class="track-info">
-                    <div class="track-name playing-text">Lối Nhỏ</div>
-                  </div>
-                  <div class="track-plays">45,686,866</div>
-                  <div class="track-duration">4:12</div>
-                  <button data-label="tooltip" class="track-menu-btn">
-                    <i class="fas fa-ellipsis-h"></i>
-                  </button>
-                </div>
-
-                <div class="track-item">
-                  <div class="track-number">3</div>
-                  <div class="track-image">
-                    <img
-                      src="placeholder.svg?height=40&width=40"
-                      alt="Cho Minh Em"
-                    />
-                  </div>
-                  <div class="track-info">
-                    <div class="track-name">Cho Minh Em</div>
-                  </div>
-                  <div class="track-plays">20,039,024</div>
-                  <div class="track-duration">3:26</div>
-                  <button data-label="tooltip" class="track-menu-btn">
-                    <i class="fas fa-ellipsis-h"></i>
-                  </button>
-                </div>
-              </div>
-            </section>
-    `;
-    detailContainer.innerHTML = html;
-  }
-
-  /**
-   * Xử lý click vào playlist
-   */
-  _handlePlaylistClick(playlist) {
-    console.log("Playlist clicked:", playlist);
-    this._setDetailContent(playlist);
-    this._hideHome();
-    //TODO: Hiển thị popular track
-    this.showToast(
-      `Đang mở playlist: ${playlist.name || playlist.title}`,
-      "info"
-    );
-  }
-
-  /**
-   * Xử lý click vào artist
-   */
-  _handleArtistClick(artist) {
-    console.log("Artist clicked:", artist);
-    this._setDetailContent(artist);
-    this._hideHome();
-    //TODO: Hiển thị popular track
-    this.showToast(
-      `Đang mở trang nghệ sĩ: ${artist.name || artist.display_name}`,
-      "info"
-    );
-  }
-
-  /**
-   * Render toàn bộ trang Home
-   */
-  renderHomePage() {
-    if (window.spotifyApp && window.spotifyApp.getService) {
-      const homeService = window.spotifyApp.getService("home");
-      if (homeService) {
-        // Render Today's biggest hits
-        const todaysHits = homeService.getTodaysHits();
-        this.renderTodaysHits(todaysHits);
-
-        // Render Popular artists
-        const popularArtists = homeService.getPopularArtists();
-        this.renderPopularArtists(popularArtists);
-      }
-    }
-  }
-
-  /**
-   * Refresh trang Home
-   */
-  async refreshHomePage() {
-    if (window.spotifyApp && window.spotifyApp.getService) {
-      const homeService = window.spotifyApp.getService("home");
-      if (homeService) {
-        await homeService.refreshHomeData();
-        this.renderHomePage();
-      }
-    }
-  }
-
-  /**
-   * Thiết lập navigation cho Home page
-   */
-  _setupHomeNavigation() {
-    // Hits navigation
-    const hitsPrevBtn = document.getElementById("hitsPrevBtn");
-    const hitsNextBtn = document.getElementById("hitsNextBtn");
-    const hitsContainer = document.querySelector(".hits-grid-container");
-
-    if (hitsPrevBtn && hitsNextBtn && hitsContainer) {
-      this._setupCarouselNavigation(
-        hitsContainer,
-        hitsPrevBtn,
-        hitsNextBtn,
-        200,
-        16
-      );
-    }
-
-    // Artists navigation
-    const artistsPrevBtn = document.getElementById("artistsPrevBtn");
-    const artistsNextBtn = document.getElementById("artistsNextBtn");
-    const artistsContainer = document.querySelector(".artists-grid-container");
-
-    if (artistsPrevBtn && artistsNextBtn && artistsContainer) {
-      this._setupCarouselNavigation(
-        artistsContainer,
-        artistsPrevBtn,
-        artistsNextBtn,
-        180,
-        16
-      );
-    }
-  }
-
-  /**
-   * Thiết lập carousel navigation cho một container
-   */
-  _setupCarouselNavigation(container, prevBtn, nextBtn, cardWidth, gap) {
-    let currentPosition = 0;
-    const totalCards = container.children.length;
-    let resizeTimeout;
-    const scrollStep = 3;
-
-    // Calculate visible cards and max position
-    const calculateVisibleCards = () => {
-      const containerWidth = container.parentElement.offsetWidth;
-      return Math.floor(containerWidth / (cardWidth + gap));
-    };
-
-    let visibleCards = calculateVisibleCards();
-    let maxPosition = Math.max(0, totalCards - visibleCards);
-
-    // Update button states
-    const updateButtonStates = () => {
-      prevBtn.disabled = currentPosition <= 0;
-      nextBtn.disabled = currentPosition >= maxPosition;
-    };
-
-    // Move to position with smooth animation
-    const moveToPosition = (position) => {
-      currentPosition = Math.max(0, Math.min(position, maxPosition));
-      const translateX = -currentPosition * (cardWidth + gap);
-
-      // Add smooth transition
-      container.style.transition =
-        "transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)";
-      container.style.transform = `translateX(${translateX}px)`;
-
-      updateButtonStates();
-    };
-
-    // Event listeners with smooth animation
-    prevBtn.addEventListener("click", () => {
-      if (currentPosition > 0) {
-        const newPosition = Math.max(0, currentPosition - scrollStep);
-        moveToPosition(newPosition);
-      }
-    });
-
-    nextBtn.addEventListener("click", () => {
-      if (currentPosition < maxPosition) {
-        const newPosition = Math.min(maxPosition, currentPosition + scrollStep);
-        moveToPosition(newPosition);
-      }
-    });
-
-    // Initial state
-    updateButtonStates();
-
-    // Handle window resize with debounce
-    const handleResize = () => {
-      clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(() => {
-        const newVisibleCards = calculateVisibleCards();
-        const newMaxPosition = Math.max(0, totalCards - newVisibleCards);
-
-        visibleCards = newVisibleCards;
-        maxPosition = newMaxPosition;
-
-        if (currentPosition > newMaxPosition) {
-          currentPosition = newMaxPosition;
+    // Validation theo từng field
+    switch (fieldName) {
+      case "username":
+        if (formType === "signup") {
+          if (!value) {
+            isValid = false;
+            errorMessage = "Vui lòng nhập tên người dùng";
+          } else if (value.length < APP_CONFIG.VALIDATION.USERNAME_MIN_LENGTH) {
+            isValid = false;
+            errorMessage = `Tên người dùng phải có ít nhất ${APP_CONFIG.VALIDATION.USERNAME_MIN_LENGTH} ký tự`;
+          } else if (value.length > APP_CONFIG.VALIDATION.USERNAME_MAX_LENGTH) {
+            isValid = false;
+            errorMessage = `Tên người dùng không được quá ${APP_CONFIG.VALIDATION.USERNAME_MAX_LENGTH} ký tự`;
+          } else if (!APP_CONFIG.VALIDATION.USERNAME_REGEX.test(value)) {
+            isValid = false;
+            errorMessage =
+              "Tên người dùng chỉ được chứa chữ cái, số và dấu gạch dưới";
+          }
         }
+        break;
 
-        // Remove transition temporarily for instant repositioning
-        container.style.transition = "none";
-        moveToPosition(currentPosition);
+      case "email":
+        if (!value) {
+          isValid = false;
+          errorMessage = "Vui lòng nhập email";
+        } else if (!APP_CONFIG.VALIDATION.EMAIL_REGEX.test(value)) {
+          isValid = false;
+          errorMessage = "Vui lòng nhập email hợp lệ";
+        }
+        break;
 
-        // Restore transition after repositioning
-        setTimeout(() => {
-          container.style.transition =
-            "transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)";
-        }, 10);
-      }, 150); // Debounce delay
-    };
+      case "password":
+        if (!value) {
+          isValid = false;
+          errorMessage = "Vui lòng nhập mật khẩu";
+        } else if (value.length < APP_CONFIG.VALIDATION.PASSWORD_MIN_LENGTH) {
+          isValid = false;
+          errorMessage = `Mật khẩu phải có ít nhất ${APP_CONFIG.VALIDATION.PASSWORD_MIN_LENGTH} ký tự`;
+        } else if (!APP_CONFIG.VALIDATION.PASSWORD_REGEX.test(value)) {
+          isValid = false;
+          errorMessage = "Mật khẩu phải bao gồm chữ hoa, chữ thường và số";
+        }
+        break;
+    }
 
-    window.addEventListener("resize", handleResize);
+    // Hiển thị hoặc ẩn error message
+    if (!isValid) {
+      this._showInputError(input, errorMessage);
+    } else {
+      this._clearInputError(input);
+    }
 
-    // Cleanup function
-    return () => {
-      window.removeEventListener("resize", handleResize);
-      clearTimeout(resizeTimeout);
-    };
+    return isValid;
   }
 
-  _setupCommonEvents() {
-    const logo = document.querySelector(".logo > i");
-    const homeBtn = document.querySelector(".home-btn");
-    logo.addEventListener("click", this._showHome);
-    homeBtn.addEventListener("click", this._showHome);
+  /**
+   * Hiển thị error cho input
+   */
+  _showInputError(input, message) {
+    const formGroup = input.closest(".form-group");
+    const errorElement = formGroup.querySelector(".error-message");
+
+    if (errorElement) {
+      errorElement.querySelector("span").textContent = message;
+      errorElement.style.display = "flex";
+      formGroup.classList.add("invalid");
+    }
+  }
+
+  /**
+   * Ẩn error cho input
+   */
+  _clearInputError(input) {
+    const formGroup = input.closest(".form-group");
+    const errorElement = formGroup.querySelector(".error-message");
+
+    if (errorElement) {
+      errorElement.style.display = "none";
+      formGroup.classList.remove("invalid");
+    }
+  }
+
+  /**
+   * Validation toàn bộ form trước khi submit
+   */
+  validateForm(form, formType) {
+    const inputs = form.querySelectorAll("input");
+    let isValid = true;
+
+    inputs.forEach((input) => {
+      if (!this._validateInput(input, formType)) {
+        isValid = false;
+      }
+    });
+
+    return isValid;
+  }
+
+  /**
+   * Reset tất cả error messages trong form
+   */
+  resetFormErrors(form) {
+    const inputs = form.querySelectorAll("input");
+    inputs.forEach((input) => {
+      this._clearInputError(input);
+    });
+  }
+
+  /**
+   * Hiển thị form đăng ký
+   */
+  showSignupForm() {
+    const signupForm = document.getElementById("signupForm");
+    const loginForm = document.getElementById("loginForm");
+
+    if (signupForm && loginForm) {
+      signupForm.style.display = "block";
+      loginForm.style.display = "none";
+    }
+  }
+
+  /**
+   * Hiển thị form đăng nhập
+   */
+  showLoginForm() {
+    const signupForm = document.getElementById("signupForm");
+    const loginForm = document.getElementById("loginForm");
+
+    if (signupForm && loginForm) {
+      signupForm.style.display = "none";
+      loginForm.style.display = "block";
+    }
+  }
+
+  /**
+   * Toggle user dropdown
+   */
+  toggleUserDropdown() {
+    const userDropdown = document.getElementById("userDropdown");
+    if (userDropdown) {
+      userDropdown.classList.toggle("show");
+    }
+  }
+
+  /**
+   * Ẩn user dropdown
+   */
+  hideUserDropdown() {
+    const userDropdown = document.getElementById("userDropdown");
+    if (userDropdown) {
+      userDropdown.classList.remove("show");
+    }
+  }
+
+  /**
+   * Cập nhật UI cho user đã đăng nhập
+   */
+  updateUIForAuthenticatedUser() {
+    // Ẩn nút đăng nhập/đăng ký
+    const authButtons = document.querySelectorAll(".signup-btn, .login-btn");
+    authButtons.forEach((btn) => (btn.style.display = "none"));
+
+    // Hiển thị user info
+    const userInfo = document.querySelector(".user-menu");
+    if (userInfo) {
+      userInfo.style.display = "flex";
+    }
+
+    // Cập nhật avatar và tên
+    if (window.spotifyApp && window.spotifyApp.getService) {
+      const authService = window.spotifyApp.getService("auth");
+      if (authService) {
+        const currentUser = authService.getCurrentUser();
+        if (currentUser) {
+          const userAvatar = document.getElementById("userAvatar");
+          const userName = document.getElementById("userName");
+
+          if (userAvatar && currentUser.avatar) {
+            userAvatar.src = currentUser.avatar;
+          }
+
+          if (userName && currentUser.displayName) {
+            userName.textContent = currentUser.displayName;
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Cập nhật UI cho user chưa đăng nhập
+   */
+  updateUIForUnauthenticatedUser() {
+    // Hiển thị nút đăng nhập/đăng ký
+    const authButtons = document.querySelectorAll(".signup-btn, .login-btn");
+    authButtons.forEach((btn) => (btn.style.display = "block"));
+
+    // Ẩn user info
+    const userInfo = document.querySelector(".user-menu");
+    if (userInfo) {
+      userInfo.style.display = "none";
+    }
+  }
+
+  /**
+   * Thiết lập library filter events
+   */
+  _setupLibraryFilterEvents() {
+    // Lọc playlists/artists
+    const playlistTab = document.querySelector(".tab-playlist");
+    const artistTab = document.querySelector(".tab-artist");
+    const libraryContent = document.querySelector(".library-content");
+    const searchLibraryBtn = document.querySelector(".search-library-btn");
+    const searchLibraryInput = document.querySelector(".search-library-input");
+    const librarySortBtn = document.querySelector(".sort-btn");
+
+    if (!playlistTab || !artistTab || !libraryContent) return;
+
+    function filterLibrary(hideType) {
+      const items = libraryContent.querySelectorAll(".library-item");
+      items.forEach((item) => {
+        const type = item.dataset.type?.toLowerCase() || "";
+        item.style.display = type === hideType.toLowerCase() ? "none" : "";
+      });
+    }
+
+    playlistTab.addEventListener("click", () => {
+      artistTab.classList.remove("active");
+      playlistTab.classList.toggle("active");
+
+      if (playlistTab.classList.contains("active")) {
+        filterLibrary("artist");
+      } else {
+        filterLibrary(""); // hiện tất cả
+      }
+    });
+
+    artistTab.addEventListener("click", () => {
+      playlistTab.classList.remove("active");
+      artistTab.classList.toggle("active");
+
+      if (artistTab.classList.contains("active")) {
+        filterLibrary("playlist");
+      } else {
+        filterLibrary(""); // hiện tất cả
+      }
+    });
+
+    if (searchLibraryBtn && searchLibraryInput) {
+      searchLibraryBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        searchLibraryBtn.classList.add("active");
+        searchLibraryInput.focus();
+      });
+
+      document.addEventListener("click", (e) => {
+        if (
+          !searchLibraryBtn.contains(e.target) &&
+          !searchLibraryInput.contains(e.target)
+        ) {
+          searchLibraryBtn.classList.remove("active");
+          searchLibraryInput.value = "";
+          if (playlistTab.classList.contains("active")) {
+            filterLibrary("artist");
+          } else if (artistTab.classList.contains("active")) {
+            filterLibrary("playlist");
+          } else {
+            filterLibrary(""); // hiện tất cả
+          }
+        }
+      });
+
+      // Sự kiện nhập vào ô tìm kiếm lọc
+      searchLibraryInput.addEventListener("input", () => {
+        const keyword = searchLibraryInput.value.trim().toLowerCase();
+
+        const items = libraryContent.querySelectorAll(".library-item");
+
+        // Xác định trạng thái hiện tại
+        const isPlaylistActive = playlistTab.classList.contains("active");
+        const isArtistActive = artistTab.classList.contains("active");
+
+        items.forEach((item) => {
+          const type = item.dataset.type?.toLowerCase() || "";
+          const name = item
+            .querySelector(".item-title")
+            .textContent.toLowerCase();
+
+          // Kiểm tra điều kiện lọc theo tab
+          let typeMatch = true;
+          if (isPlaylistActive) {
+            typeMatch = type === "playlist";
+          } else if (isArtistActive) {
+            typeMatch = type === "artist";
+          } // else không filter theo type
+
+          // Kiểm tra keyword có nằm trong text hay không
+          const keywordMatch = name.includes(keyword);
+
+          // Nếu thỏa 2 điều kiện thì show, không thì ẩn
+          item.style.display = typeMatch && keywordMatch ? "" : "none";
+        });
+      });
+    }
   }
 }
 
-// Export instance singleton
 export const uiService = new UIService();
 export default uiService;

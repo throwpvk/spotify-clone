@@ -166,16 +166,43 @@ class AuthService {
   }
 
   /**
-   * Cập nhật UI dựa trên trạng thái authentication
+   * Cập nhật UI
    */
   _updateUI() {
-    if (window.spotifyApp && window.spotifyApp.getService) {
-      const uiService = window.spotifyApp.getService("ui");
-      if (uiService) {
-        if (this.currentUser) {
-          uiService.updateUIForAuthenticatedUser(this.currentUser);
-        } else {
+    if (this.currentUser) {
+      // Gọi UIService để cập nhật UI cho user đã đăng nhập
+      if (window.spotifyApp && window.spotifyApp.getService) {
+        const uiService = window.spotifyApp.getService("ui");
+        if (uiService) {
+          uiService.updateUIForAuthenticatedUser();
+        }
+      }
+
+      // Trigger library render khi user đăng nhập
+      if (window.spotifyApp && window.spotifyApp.getService) {
+        const libraryRenderer = window.spotifyApp.getService("libraryRenderer");
+        if (libraryRenderer) {
+          libraryRenderer.renderLibrary();
+        }
+      }
+    } else {
+      // Gọi UIService để cập nhật UI cho user chưa đăng nhập
+      if (window.spotifyApp && window.spotifyApp.getService) {
+        const uiService = window.spotifyApp.getService("ui");
+        if (uiService) {
           uiService.updateUIForUnauthenticatedUser();
+        }
+      }
+
+      // Clear library khi user đăng xuất
+      if (window.spotifyApp && window.spotifyApp.getService) {
+        const libraryRenderer = window.spotifyApp.getService("libraryRenderer");
+        if (libraryRenderer) {
+          const libraryContent = document.querySelector(".library-content");
+          if (libraryContent) {
+            libraryContent.innerHTML =
+              '<p class="no-data">Please login to view your library</p>';
+          }
         }
       }
     }
@@ -410,36 +437,6 @@ class AuthService {
    */
   getCurrentUser() {
     return this.currentUser;
-  }
-
-  /**
-   * Lấy auth token
-   */
-  getAuthToken() {
-    return localStorage.getItem(APP_CONFIG.STORAGE_KEYS.AUTH_TOKEN);
-  }
-
-  /**
-   * Kiểm tra service đã khởi tạo chưa
-   */
-  isInitialized() {
-    return this.isInitialized;
-  }
-
-  /**
-   * Refresh user data từ server
-   */
-  async refreshUserData() {
-    if (this.isUserAuthenticated()) {
-      try {
-        await this._validateToken();
-        return this.currentUser;
-      } catch (error) {
-        console.error("Failed to refresh user data:", error);
-        this.logout();
-        throw error;
-      }
-    }
   }
 }
 

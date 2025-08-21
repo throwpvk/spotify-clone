@@ -1,12 +1,12 @@
 /**
- * Home Service Module
- * Service xử lý tất cả logic liên quan đến trang Home
+ * Content Service Module
+ * Service xử lý tất cả logic liên quan đến content (playlists, artists, tracks)
  */
 
 import { apiService } from "./api.js";
 import { MESSAGES } from "../constants/messages.js";
 
-class HomeService {
+class ContentService {
   constructor() {
     this.todaysHits = [];
     this.popularArtists = [];
@@ -19,30 +19,30 @@ class HomeService {
    */
   async _init() {
     try {
-      await this._loadHomeData();
+      await this._loadContentData();
     } catch (error) {
-      console.error("Error initializing home service:", error);
+      console.error("Error initializing content service:", error);
     }
   }
 
   /**
-   * Load tất cả dữ liệu cho trang Home
+   * Load tất cả dữ liệu content
    */
-  async _loadHomeData() {
+  async _loadContentData() {
     try {
       this.isLoading = true;
 
       // Load song song cả hai API
       const [playlistsResponse, artistsResponse] = await Promise.all([
-        this._loadTodaysHits(),
+        this._loadAllPlaylists(),
         this._loadPopularArtists(),
       ]);
 
-      console.log("Home data loaded successfully");
+      console.log("Content data loaded successfully");
       console.log(`- Today's biggest hits: ${this.todaysHits.length} items`);
       console.log(`- Popular artists: ${this.popularArtists.length} items`);
     } catch (error) {
-      console.error("Error loading home data:", error);
+      console.error("Error loading content data:", error);
     } finally {
       this.isLoading = false;
     }
@@ -51,16 +51,32 @@ class HomeService {
   /**
    * Load "Today's biggest hits" - API Playlists/Get All Playlists
    */
-  async _loadTodaysHits() {
+  async _loadAllPlaylists() {
     try {
       const response = await apiService.getAllPlaylists(20, 0);
 
       if (response.success) {
-        // API trả về { playlists: [...] } thay vì trực tiếp array
+        // API trả về { playlists: [...] }
         this.todaysHits = response.data.playlists || response.data || [];
-        console.log(
-          `Loaded ${this.todaysHits.length} playlists for Today's biggest hits`
+
+        // Gọi song song lấy tracks cho từng playlist
+        await Promise.all(
+          this.todaysHits.map(async (playlist) => {
+            try {
+              const resTracks = await apiService.getPlaylistAllTracksById(
+                playlist.id
+              );
+              playlist.tracks = resTracks.success
+                ? resTracks.data.tracks || resTracks.data || []
+                : [];
+            } catch (err) {
+              console.error(`Lỗi khi lấy tracks playlist ${playlist.id}:`, err);
+              playlist.tracks = [];
+            }
+          })
         );
+
+        console.log(this.todaysHits);
       } else {
         console.error("Failed to load Today's biggest hits");
         this.todaysHits = [];
@@ -81,9 +97,24 @@ class HomeService {
       if (response.success) {
         // API trả về { artists: [...] } thay vì trực tiếp array
         this.popularArtists = response.data.artists || response.data || [];
-        console.log(
-          `Loaded ${this.popularArtists.length} artists for Popular artists`
+
+        // gọi song song lấy tracks cho từng artist
+        await Promise.all(
+          this.popularArtists.map(async (artist) => {
+            try {
+              const resTracks = await apiService.getArtistAllTracksById(
+                artist.id
+              );
+              artist.tracks = resTracks.success
+                ? resTracks.data.tracks || resTracks.data || []
+                : [];
+            } catch (err) {
+              console.error(`Lỗi khi lấy tracks cho artist ${artist.id}:`, err);
+              artist.tracks = [];
+            }
+          })
         );
+        console.log(this.popularArtists);
       } else {
         console.error("Failed to load Popular artists");
         this.popularArtists = [];
@@ -95,10 +126,10 @@ class HomeService {
   }
 
   /**
-   * Refresh dữ liệu trang Home
+   * Refresh dữ liệu content
    */
-  async refreshHomeData() {
-    await this._loadHomeData();
+  async refreshContentData() {
+    await this._loadContentData();
   }
 
   // ===== PUBLIC METHODS =====
@@ -116,21 +147,7 @@ class HomeService {
   getPopularArtists() {
     return this.popularArtists;
   }
-
-  /**
-   * Kiểm tra đang loading
-   */
-  getIsLoading() {
-    return this.isLoading;
-  }
-
-  /**
-   * Lấy tổng số items
-   */
-  getTotalItems() {
-    return this.todaysHits.length + this.popularArtists.length;
-  }
 }
 
 // Export singleton instance
-export const homeService = new HomeService();
+export const contentService = new ContentService();

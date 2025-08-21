@@ -3,53 +3,38 @@
  * Cấu hình các endpoint API
  */
 
-export const API_ENDPOINTS = {
+export const API = {
   // Authentication
   AUTH: {
-    REGISTER: "https://spotify.f8team.dev/api/auth/register",
-    LOGIN: "https://spotify.f8team.dev/api/auth/login",
+    REGISTER: "/auth/register",
+    LOGIN: "/auth/login",
+    GET_FOLLOWED_PLAYLISTS: "/me/playlists/followed",
+    GET_FOLLOWED_ARTISTS: "/me/following",
+    GET_LIKED_TRACKS: "/me/tracks/liked",
   },
 
   // User Management
   USER: {
-    ME: "https://spotify.f8team.dev/api/users/me",
-    PROFILE: "https://spotify.f8team.dev/api/users/me",
+    ME: "/users/me",
+    PROFILE: "/users/me",
   },
 
   // User Library
   ME: {
-    PLAYLISTS: "https://spotify.f8team.dev/api/me/playlists",
+    PLAYLISTS: "/me/playlists",
   },
 
   // Playlists
   PLAYLISTS: {
-    GET_ALL: "https://spotify.f8team.dev/api/playlists",
-    GET_BY_ID: "https://spotify.f8team.dev/api/playlists",
+    GET_ALL: "/playlists",
+    GET_BY_ID: "/playlists",
+    GET_ALL_TRACKS_BY_ID: "/playlists",
   },
 
   // Artists
   ARTISTS: {
-    GET_ALL: "https://spotify.f8team.dev/api/artists",
-    GET_BY_ID: "https://spotify.f8team.dev/api/artists",
-  },
-
-  // HTTP Methods
-  HTTP_METHODS: {
-    GET: "GET",
-    POST: "POST",
-    PUT: "PUT",
-    DELETE: "DELETE",
-    PATCH: "PATCH",
-  },
-
-  // Status Codes
-  STATUS_CODES: {
-    OK: 200,
-    CREATED: 201,
-    BAD_REQUEST: 400,
-    UNAUTHORIZED: 401,
-    FORBIDDEN: 403,
-    NOT_FOUND: 404,
-    INTERNAL_SERVER_ERROR: 500,
+    GET_ALL: "/artists",
+    GET_BY_ID: "/artists",
+    GET_ALL_TRACKS_BY_ID: "/artists",
   },
 };
