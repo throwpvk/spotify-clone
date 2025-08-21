@@ -8,17 +8,6 @@ class LibraryRenderer {
     this.likedTracks = [];
     this.followedPlaylists = [];
     this.followedArtists = [];
-    this._init();
-  }
-
-  /**
-   * Khởi tạo renderer
-   */
-  async _init() {
-    // Render library sau khi DOM đã sẵn sàng
-    setTimeout(async () => {
-      await this.renderLibrary();
-    }, 1000); // Delay 1 giây để đảm bảo auth service đã khởi tạo
   }
 
   /**
@@ -120,13 +109,9 @@ class LibraryRenderer {
           }
 
           console.log("Library data loaded successfully");
-          console.log(`- Liked tracks: ${this.likedTracks.length} items`);
-          console.log(
-            `- Followed playlists: ${this.followedPlaylists.length} items`
-          );
-          console.log(
-            `- Followed artists: ${this.followedArtists.length} items`
-          );
+          console.log(`Liked tracks:`, this.likedTracks);
+          console.log(`Followed playlists:`, this.followedPlaylists);
+          console.log(`Followed artists:`, this.followedArtists);
         }
       }
     } catch (error) {

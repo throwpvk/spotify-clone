@@ -355,6 +355,10 @@ class HomeRenderer {
               <button data-label="tooltip" class="play-btn-large">
                 <i class="fas fa-play"></i>
               </button>
+
+              <button data-label="tooltip" class="btn library-btn add">
+                <i class="fa-solid fa-circle-plus"></i>
+              </button>
             </section>
 
             <!-- Popular Tracks -->

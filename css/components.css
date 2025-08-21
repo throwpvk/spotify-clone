@@ -1720,3 +1720,21 @@ button.tooltip-bottom[data-label]:hover::after {
     right: 2px;
   }
 }
+
+/* library button */
+.library-btn {
+  background-color: transparent;
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+}
+
+.library-btn:hover {
+  color: var(--text-primary);
+  transform: scale(1.04);
+}
+
+.library-btn i {
+  font-size: 30px;
+}
