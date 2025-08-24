@@ -137,7 +137,7 @@ class ContentService {
   /**
    * Lấy dữ liệu "Today's biggest hits"
    */
-  getTodaysHits() {
+  getAllPlaylists() {
     return this.todaysHits;
   }
 

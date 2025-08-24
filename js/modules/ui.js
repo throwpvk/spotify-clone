@@ -134,7 +134,7 @@ class UIService {
     const itemType = targetElement.dataset.type?.toLowerCase();
     const itemName = targetElement.querySelector(".item-title")?.textContent;
 
-    if (!itemType || !itemName) return;
+    if (!itemType || !itemName || itemType === "liked") return;
 
     // Lưu thông tin item hiện tại
     this.currentContextItem = {
@@ -187,6 +187,7 @@ class UIService {
       unfollowItem.style.display = "flex";
     } else if (itemType === "playlist") {
       removeItem.style.display = "flex";
+    } else if (itemType === "myplaylist") {
       deleteItem.style.display = "flex";
     }
   }
@@ -226,17 +227,19 @@ class UIService {
       case "unfollow":
         if (type === "artist") {
           this._handleUnfollowArtist(name, element);
+          console.log(element);
         }
         break;
 
       case "remove":
         if (type === "playlist") {
           this._handleRemovePlaylist(name, element);
+          console.log(element);
         }
         break;
 
       case "delete":
-        if (type === "playlist") {
+        if (type === "myplaylist") {
           this._handleDeletePlaylist(name, element);
         }
         break;

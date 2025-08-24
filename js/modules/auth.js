@@ -180,9 +180,9 @@ class AuthService {
 
       // Trigger library render khi user đăng nhập
       if (window.spotifyApp && window.spotifyApp.getService) {
-        const libraryRenderer = window.spotifyApp.getService("libraryRenderer");
-        if (libraryRenderer) {
-          libraryRenderer.renderLibrary();
+        const library = window.spotifyApp.getService("library");
+        if (library) {
+          library.renderLibrary();
         }
       }
     } else {
@@ -196,8 +196,8 @@ class AuthService {
 
       // Clear library khi user đăng xuất
       if (window.spotifyApp && window.spotifyApp.getService) {
-        const libraryRenderer = window.spotifyApp.getService("libraryRenderer");
-        if (libraryRenderer) {
+        const library = window.spotifyApp.getService("library");
+        if (library) {
           const libraryContent = document.querySelector(".library-content");
           if (libraryContent) {
             libraryContent.innerHTML =

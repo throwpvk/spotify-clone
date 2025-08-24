@@ -1,9 +1,9 @@
 /**
- * Library Renderer Module
+ * Library Module
  * Module xử lý việc render library items (playlists, artists, liked tracks)
  */
 
-class LibraryRenderer {
+class Library {
   constructor() {
     this.likedTracks = [];
     this.followedPlaylists = [];
@@ -156,7 +156,7 @@ class LibraryRenderer {
   _renderLikedSongs(container) {
     const likedSongsItem = document.createElement("div");
     likedSongsItem.className = "library-item active";
-    likedSongsItem.setAttribute("data-type", "playlist");
+    likedSongsItem.setAttribute("data-type", "liked");
 
     const trackCount = this.likedTracks.length;
 
@@ -177,9 +177,6 @@ class LibraryRenderer {
     likedSongsItem.addEventListener("click", () => {
       this._handleLikedSongsClick();
     });
-
-    // TODO: Thêm xử lý context menu
-
     container.appendChild(likedSongsItem);
   }
 
@@ -222,9 +219,6 @@ class LibraryRenderer {
     playlistItem.addEventListener("click", () => {
       this._handlePlaylistClick(playlist);
     });
-
-    // TODO: Thêm xử lý context menu
-
     return playlistItem;
   }
 
@@ -263,8 +257,6 @@ class LibraryRenderer {
       this._handleArtistClick(artist);
     });
 
-    // TODO: Thêm xử lý context menu
-
     return artistItem;
   }
 
@@ -277,7 +269,7 @@ class LibraryRenderer {
     // Hiển thị toast thông báo
     if (window.spotifyApp && window.spotifyApp.getService) {
       const uiService = window.spotifyApp.getService("ui");
-      const homeRenderer = window.spotifyApp.getService("homeRenderer");
+      const home = window.spotifyApp.getService("home");
       if (uiService) {
         uiService.showToast(
           `Open Liked Songs (${this.likedTracks.length} tracks)`,
@@ -285,9 +277,9 @@ class LibraryRenderer {
         );
       }
 
-      if (homeRenderer) {
-        homeRenderer.setDetailContent(this.likedTracks);
-        homeRenderer.hideHome();
+      if (home) {
+        home.setDetailContent(this.likedTracks);
+        home.hideHome();
       }
     }
   }
@@ -301,14 +293,14 @@ class LibraryRenderer {
     // Hiển thị toast thông báo
     if (window.spotifyApp && window.spotifyApp.getService) {
       const uiService = window.spotifyApp.getService("ui");
-      const homeRenderer = window.spotifyApp.getService("homeRenderer");
+      const home = window.spotifyApp.getService("home");
       if (uiService) {
         uiService.showToast(`Open ${playlist.name || playlist.title}`, "info");
       }
       console.log(playlist);
-      if (homeRenderer) {
-        homeRenderer.setDetailContent(playlist);
-        homeRenderer.hideHome();
+      if (home) {
+        home.setDetailContent(playlist);
+        home.hideHome();
       }
     }
   }
@@ -322,16 +314,16 @@ class LibraryRenderer {
     // Hiển thị toast thông báo
     if (window.spotifyApp && window.spotifyApp.getService) {
       const uiService = window.spotifyApp.getService("ui");
-      const homeRenderer = window.spotifyApp.getService("homeRenderer");
+      const home = window.spotifyApp.getService("home");
       if (uiService) {
         uiService.showToast(
           `Open ${artist.name || artist.display_name}`,
           "info"
         );
       }
-      if (homeRenderer) {
-        homeRenderer.setDetailContent(artist);
-        homeRenderer.hideHome();
+      if (home) {
+        home.setDetailContent(artist);
+        home.hideHome();
       }
     }
   }
@@ -355,6 +347,5 @@ class LibraryRenderer {
   }
 }
 
-// Export instance singleton
-export const libraryRenderer = new LibraryRenderer();
-export default libraryRenderer;
+export const library = new Library();
+export default library;

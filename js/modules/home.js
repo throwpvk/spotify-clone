@@ -1,9 +1,9 @@
 /**
- * Home Renderer Module
+ * Home Module
  * Module xử lý việc render Home page và navigation
  */
 
-class HomeRenderer {
+class Home {
   constructor() {
     this._init();
   }
@@ -29,8 +29,8 @@ class HomeRenderer {
       const contentService = window.spotifyApp.getService("content");
       if (contentService) {
         // Render Today's biggest hits
-        const todaysHits = contentService.getTodaysHits();
-        this.renderTodaysHits(todaysHits);
+        const allPlaylists = contentService.getAllPlaylists();
+        this.renderAllPlaylist(allPlaylists);
 
         // Render Popular artists
         const popularArtists = contentService.getPopularArtists();
@@ -42,7 +42,7 @@ class HomeRenderer {
   /**
    * Render "Today's biggest hits" section
    */
-  renderTodaysHits(playlists) {
+  renderAllPlaylist(playlists) {
     const container = document.querySelector(".hits-grid");
     if (!container) {
       console.warn("Today's hits container (.hits-grid) not found");
@@ -351,7 +351,9 @@ class HomeRenderer {
             </section>
 
             <!-- Artist Controls -->
-            <section class="artist-controls">
+            <section class="artist-controls" data-type="${
+              !data.is_verified ? "playlist" : "artist"
+            }" data-id="${data.id}">
               <button data-label="tooltip" class="play-btn-large">
                 <i class="fas fa-play"></i>
               </button>
@@ -523,5 +525,5 @@ class HomeRenderer {
   }
 }
 
-export const homeRenderer = new HomeRenderer();
-export default homeRenderer;
+export const home = new Home();
+export default home;
