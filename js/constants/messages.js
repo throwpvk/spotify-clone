@@ -1,6 +1,6 @@
 /**
- * Application Messages Constants
- * Chứa tất cả các message
+ * App Messages
+ * Chứa tất cả messages
  */
 
 export const MESSAGES = {

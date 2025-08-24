@@ -1,6 +1,6 @@
 /**
- * API Service Module
- * Service xử lý tất cả HTTP requests đến API và content management
+ * API Service
+ * Xử lý HTTP requests và quản lý content
  */
 
 import { API, APP_CONFIG } from "../constants/index.js";
@@ -11,29 +11,18 @@ class ApiService {
     this.timeout = APP_CONFIG.API.TIMEOUT;
     this.retryAttempts = APP_CONFIG.API.RETRY_ATTEMPTS;
     
-    // Content data storage
+    // Lưu trữ dữ liệu content
     this.todaysHits = [];
     this.popularArtists = [];
     this.isLoading = false;
     
-    this._init();
+    // Lưu trữ follow status
+    this.followedPlaylistIds = new Set();
+    this.followedArtistIds = new Set();
   }
 
   /**
-   * Khởi tạo service
-   */
-  async _init() {
-    try {
-      await this._loadContentData();
-    } catch (error) {
-      console.error("Error initializing API service:", error);
-    }
-  }
-
-  // ===== REQUEST METHODS =====
-
-  /**
-   * Thực hiện HTTP request
+   * Gửi HTTP request
    */
   async _makeRequest(url, options = {}) {
     const controller = new AbortController();
@@ -59,7 +48,7 @@ class ApiService {
   }
 
   /**
-   * Xử lý response từ API
+   * Xử lý response
    */
   async _handleResponse(response) {
     if (!response.ok) {
@@ -86,7 +75,7 @@ class ApiService {
   }
 
   /**
-   * Parse error response
+   * Parse lỗi response
    */
   async _parseErrorResponse(response) {
     try {
@@ -100,7 +89,7 @@ class ApiService {
   }
 
   /**
-   * Tạo API error object
+   * Tạo lỗi API
    */
   _createApiError(status, data) {
     const error = new Error(data.message || "API Error");
@@ -111,7 +100,7 @@ class ApiService {
   }
 
   /**
-   * Xử lý error
+   * Xử lý lỗi
    */
   _handleError(error) {
     if (error.name === "AbortError") {
@@ -127,7 +116,7 @@ class ApiService {
   }
 
   /**
-   * Lấy auth headers - Tự động thêm token nếu có
+   * Lấy auth headers
    */
   _getAuthHeaders() {
     const token = this._getAuthToken();
@@ -138,19 +127,19 @@ class ApiService {
   }
 
   /**
-   * Lấy auth token từ localStorage
+   * Lấy auth token
    */
   _getAuthToken() {
     const token = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.AUTH_TOKEN);
 
-    // Kiểm tra token hợp lệ
+    // Kiểm tra token
     if (
       !token ||
       token === "undefined" ||
       token === "null" ||
       token.trim() === ""
     ) {
-      console.warn("Invalid or missing auth token");
+      console.warn("Token không hợp lệ");
       return null;
     }
 
@@ -158,13 +147,11 @@ class ApiService {
   }
 
   /**
-   * Kiểm tra có token không
+   * Kiểm tra token
    */
   _hasAuthToken() {
     return !!this._getAuthToken();
   }
-
-  // ===== PUBLIC HTTP METHODS =====
 
   async get(url, params = {}) {
     const queryString = new URLSearchParams(params).toString();
@@ -195,8 +182,6 @@ class ApiService {
     });
   }
 
-  // ===== AUTHENTICATION API =====
-
   /**
    * Đăng ký tài khoản
    */
@@ -211,10 +196,8 @@ class ApiService {
     return this.post(this.baseURL + API.AUTH.LOGIN, credentials);
   }
 
-  // ===== USER API =====
-
   /**
-   * Lấy thông tin user hiện tại - Cần authentication
+   * Lấy thông tin user
    */
   async getProfile() {
     if (!this._hasAuthToken()) {
@@ -223,10 +206,8 @@ class ApiService {
     return this.get(this.baseURL + API.USER.PROFILE);
   }
 
-  // ===== PLAYLISTS API (Today's biggest hits) =====
-
   /**
-   * Lấy tất cả playlists từ API
+   * Lấy tất cả playlists
    */
   async getAllPlaylists(limit = 20, offset = 0) {
     const params = new URLSearchParams({
@@ -237,7 +218,7 @@ class ApiService {
   }
 
   /**
-   * Lấy All Tracks của Playlist theo Playlist ID
+   * Lấy tracks của playlist
    */
   async getPlaylistAllTracksById(id) {
     return this.get(
@@ -259,7 +240,7 @@ class ApiService {
   }
 
   /**
-   * Lấy Popular Tracks của Artist theo Artist ID
+   * Lấy tracks của artist
    */
   async getArtistAllTracksById(id) {
     return this.get(
@@ -268,7 +249,7 @@ class ApiService {
   }
 
   /**
-   * Lấy liked tracks của user hiện tại - Cần authentication
+   * Lấy liked tracks
    */
   async getLikedTracks(limit = 50, offset = 0) {
     if (!this._hasAuthToken()) {
@@ -283,7 +264,7 @@ class ApiService {
   }
 
   /**
-   * Lấy followed playlists của user hiện tại - Cần authentication
+   * Lấy followed playlists
    */
   async getFollowedPlaylists(limit = 50, offset = 0) {
     if (!this._hasAuthToken()) {
@@ -300,7 +281,7 @@ class ApiService {
   }
 
   /**
-   * Lấy followed artists của user hiện tại - Cần authentication
+   * Lấy followed artists
    */
   async getFollowedArtists(limit = 50, offset = 0) {
     if (!this._hasAuthToken()) {
@@ -317,18 +298,27 @@ class ApiService {
   }
 
   /**
-   * Follow playlist - Cần authentication
+   * Follow playlist
    */
   async followPlaylist(playlistId) {
     if (!this._hasAuthToken()) {
       throw new Error("Authentication required");
     }
 
-    return this.post(`${this.baseURL}/playlists/${playlistId}/follow`);
+    try {
+      return await this.post(`${this.baseURL}/playlists/${playlistId}/follow`);
+    } catch (error) {
+      // Nếu lỗi 409 (Conflict) - playlist đã được follow
+      if (error.status === 409) {
+        console.log("Playlist đã được follow");
+        return { success: true, message: "Already followed" };
+      }
+      throw error;
+    }
   }
 
   /**
-   * Unfollow playlist - Cần authentication
+   * Unfollow playlist
    */
   async unfollowPlaylist(playlistId) {
     if (!this._hasAuthToken()) {
@@ -339,7 +329,7 @@ class ApiService {
   }
 
   /**
-   * Follow artist - Cần authentication
+   * Follow artist
    */
   async followArtist(artistId) {
     if (!this._hasAuthToken()) {
@@ -350,7 +340,7 @@ class ApiService {
   }
 
   /**
-   * Unfollow artist - Cần authentication
+   * Unfollow artist
    */
   async unfollowArtist(artistId) {
     if (!this._hasAuthToken()) {
@@ -361,7 +351,7 @@ class ApiService {
   }
 
   /**
-   * Like track - Cần authentication
+   * Like track
    */
   async likeTrack(trackId) {
     if (!this._hasAuthToken()) {
@@ -372,7 +362,7 @@ class ApiService {
   }
 
   /**
-   * Unlike track - Cần authentication
+   * Unlike track
    */
   async unlikeTrack(trackId) {
     if (!this._hasAuthToken()) {
@@ -382,16 +372,14 @@ class ApiService {
     return this.delete(`${this.baseURL}/tracks/${trackId}/like`);
   }
 
-  // ===== CONTENT MANAGEMENT METHODS =====
-
   /**
-   * Load tất cả dữ liệu content
+   * Load dữ liệu content
    */
-  async _loadContentData() {
+  async loadContentData() {
     try {
       this.isLoading = true;
 
-      // Load song song cả hai API
+      // Load song song 2 API
       const [playlistsResponse, artistsResponse] = await Promise.all([
         this._loadAllPlaylistsWithTracks(),
         this._loadPopularArtistsWithTracks(),
@@ -400,11 +388,16 @@ class ApiService {
       this.todaysHits = playlistsResponse;
       this.popularArtists = artistsResponse;
 
-      console.log("Content data loaded successfully");
-      console.log(`- Today's biggest hits: ${this.todaysHits.length} items`);
+      // Cập nhật follow status nếu user đã đăng nhập
+      if (this._hasAuthToken()) {
+        await this._updateFollowStatus();
+      }
+
+      console.log("Load content thành công");
+      console.log(`- Today's hits: ${this.todaysHits.length} items`);
       console.log(`- Popular artists: ${this.popularArtists.length} items`);
     } catch (error) {
-      console.error("Error loading content data:", error);
+      console.error("Lỗi load content:", error);
       this.todaysHits = [];
       this.popularArtists = [];
     } finally {
@@ -413,7 +406,7 @@ class ApiService {
   }
 
   /**
-   * Load "Today's biggest hits" với tracks - API Playlists/Get All Playlists
+   * Load Today's hits với tracks
    */
   async _loadAllPlaylistsWithTracks() {
     try {
@@ -423,7 +416,7 @@ class ApiService {
         // API trả về { playlists: [...] }
         const playlists = response.data.playlists || response.data || [];
 
-        // Gọi song song lấy tracks cho từng playlist
+        // Lấy tracks cho từng playlist
         await Promise.all(
           playlists.map(async (playlist) => {
             try {
@@ -432,36 +425,36 @@ class ApiService {
                 ? resTracks.data.tracks || resTracks.data || []
                 : [];
             } catch (err) {
-              console.error(`Lỗi khi lấy tracks playlist ${playlist.id}:`, err);
+              console.error(`Lỗi lấy tracks playlist ${playlist.id}:`, err);
               playlist.tracks = [];
             }
           })
         );
 
-        console.log("Today's biggest hits loaded:", playlists);
+        console.log("Today's hits loaded:", playlists);
         return playlists;
       } else {
-        console.error("Failed to load Today's biggest hits");
+        console.error("Lỗi load Today's hits");
         return [];
       }
     } catch (error) {
-      console.error("Error loading Today's biggest hits:", error);
+      console.error("Lỗi load Today's hits:", error);
       return [];
     }
   }
 
   /**
-   * Load "Popular artists" với tracks - API Artists/Get All Artists
+   * Load Popular artists với tracks
    */
   async _loadPopularArtistsWithTracks() {
     try {
       const response = await this.getAllArtists(20, 0);
 
       if (response.success) {
-        // API trả về { artists: [...] } thay vì trực tiếp array
+        // API trả về { artists: [...] }
         const artists = response.data.artists || response.data || [];
 
-        // gọi song song lấy tracks cho từng artist
+        // Lấy tracks cho từng artist
         await Promise.all(
           artists.map(async (artist) => {
             try {
@@ -470,7 +463,7 @@ class ApiService {
                 ? resTracks.data.tracks || resTracks.data || []
                 : [];
             } catch (err) {
-              console.error(`Lỗi khi lấy tracks cho artist ${artist.id}:`, err);
+              console.error(`Lỗi lấy tracks artist ${artist.id}:`, err);
               artist.tracks = [];
             }
           })
@@ -478,17 +471,17 @@ class ApiService {
         console.log("Popular artists loaded:", artists);
         return artists;
       } else {
-        console.error("Failed to load Popular artists");
+        console.error("Lỗi load Popular artists");
         return [];
       }
     } catch (error) {
-      console.error("Error loading Popular artists:", error);
+      console.error("Lỗi load Popular artists:", error);
       return [];
     }
   }
 
   /**
-   * Load library data với tracks
+   * Load library data
    */
   async loadLibraryData() {
     try {
@@ -496,7 +489,7 @@ class ApiService {
         throw new Error("Authentication required");
       }
 
-      // Load song song cả 3 API
+      // Load song song 3 API
       const [likedTracksRes, followedPlaylistsRes, followedArtistsRes] =
         await Promise.all([
           this.getLikedTracks(),
@@ -526,7 +519,12 @@ class ApiService {
           followedPlaylistsRes.data ||
           [];
 
-        // Gọi song song lấy tracks cho từng playlist
+        // Cập nhật follow status
+        playlists.forEach(playlist => {
+          this.followedPlaylistIds.add(playlist.id);
+        });
+
+        // Lấy tracks cho từng playlist
         await Promise.all(
           playlists.map(async (playlist) => {
             try {
@@ -536,7 +534,7 @@ class ApiService {
                 : [];
             } catch (err) {
               console.error(
-                `Lỗi khi lấy tracks playlist ${playlist.id}:`,
+                `Lỗi lấy tracks playlist ${playlist.id}:`,
                 err
               );
               playlist.tracks = [];
@@ -551,7 +549,12 @@ class ApiService {
         const artists =
           followedArtistsRes.data.artists || followedArtistsRes.data || [];
 
-        // Gọi song song lấy tracks cho từng artist
+        // Cập nhật follow status
+        artists.forEach(artist => {
+          this.followedArtistIds.add(artist.id);
+        });
+
+        // Lấy tracks cho từng artist
         await Promise.all(
           artists.map(async (artist) => {
             try {
@@ -560,7 +563,7 @@ class ApiService {
                 ? resTracks.data.tracks || resTracks.data || []
                 : [];
             } catch (err) {
-              console.error(`Lỗi khi lấy tracks artist ${artist.id}:`, err);
+              console.error(`Lỗi lấy tracks artist ${artist.id}:`, err);
               artist.tracks = [];
             }
           })
@@ -568,37 +571,155 @@ class ApiService {
         result.followedArtists = artists;
       }
 
-      console.log("Library data loaded successfully:", result);
+      console.log("Load library thành công:", result);
       return result;
     } catch (error) {
-      console.error("Error loading library data:", error);
+      console.error("Lỗi load library:", error);
       throw error;
     }
   }
 
-  // ===== PUBLIC CONTENT METHODS =====
-
   /**
-   * Refresh dữ liệu content
+   * Refresh content
    */
   async refreshContentData() {
-    await this._loadContentData();
+    await this.loadContentData();
   }
 
   /**
-   * Lấy dữ liệu "Today's biggest hits" đã được cache
+   * Refresh library
+   */
+  async refreshLibraryData() {
+    await this.loadLibraryData();
+  }
+
+  /**
+   * Lấy Today's hits đã cache
    */
   getCachedPlaylists() {
     return this.todaysHits;
   }
 
   /**
-   * Lấy dữ liệu "Popular artists" đã được cache
+   * Lấy Popular artists đã cache
    */
   getCachedArtists() {
     return this.popularArtists;
   }
+
+  // ===== FOLLOW STATUS METHODS =====
+
+  /**
+   * Cập nhật follow status
+   */
+  async _updateFollowStatus() {
+    try {
+      if (!this._hasAuthToken()) return;
+
+      const [followedPlaylistsRes, followedArtistsRes] = await Promise.all([
+        this.getFollowedPlaylists(),
+        this.getFollowedArtists(),
+      ]);
+
+      // Reset follow status
+      this.followedPlaylistIds.clear();
+      this.followedArtistIds.clear();
+
+      // Cập nhật playlist follow status
+      if (followedPlaylistsRes.success) {
+        const playlists = followedPlaylistsRes.data.playlists || followedPlaylistsRes.data || [];
+        playlists.forEach(playlist => {
+          this.followedPlaylistIds.add(playlist.id);
+        });
+      }
+
+      // Cập nhật artist follow status
+      if (followedArtistsRes.success) {
+        const artists = followedArtistsRes.data.artists || followedArtistsRes.data || [];
+        artists.forEach(artist => {
+          this.followedArtistIds.add(artist.id);
+        });
+      }
+
+      console.log("Follow status updated");
+    } catch (error) {
+      console.error("Lỗi cập nhật follow status:", error);
+    }
+  }
+
+  /**
+   * Kiểm tra playlist đã được follow chưa
+   */
+  isPlaylistFollowed(playlistId) {
+    return this.followedPlaylistIds.has(playlistId);
+  }
+
+  /**
+   * Kiểm tra artist đã được follow chưa
+   */
+  isArtistFollowed(artistId) {
+    return this.followedArtistIds.has(artistId);
+  }
+
+  /**
+   * Follow/Unfollow playlist
+   */
+  async togglePlaylistFollow(playlistId) {
+    try {
+      if (!this._hasAuthToken()) {
+        throw new Error("Authentication required");
+      }
+
+      const isFollowed = this.isPlaylistFollowed(playlistId);
+      
+      if (isFollowed) {
+        // Unfollow playlist
+        await this.unfollowPlaylist(playlistId);
+        this.followedPlaylistIds.delete(playlistId);
+      } else {
+        // Follow playlist
+        await this.followPlaylist(playlistId);
+        this.followedPlaylistIds.add(playlistId);
+      }
+
+      console.log("Follow status updated:", this.followedPlaylistIds);
+
+      return !isFollowed; // Trả về trạng thái mới
+    } catch (error) {
+      console.error("Lỗi toggle playlist follow:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Follow/Unfollow artist
+   */
+  async toggleArtistFollow(artistId) {
+    try {
+      if (!this._hasAuthToken()) {
+        throw new Error("Authentication required");
+      }
+
+      const isFollowed = this.isArtistFollowed(artistId);
+      
+      if (isFollowed) {
+        // Unfollow artist
+        await this.unfollowArtist(artistId);
+        this.followedArtistIds.delete(artistId);
+      } else {
+        // Follow artist
+        await this.followArtist(artistId);
+        this.followedArtistIds.add(artistId);
+      }
+
+      console.log("Follow status updated:", this.followedArtistIds);
+
+      return !isFollowed; // Trả về trạng thái mới
+    } catch (error) {
+      console.error("Lỗi toggle artist follow:", error);
+      throw error;
+    }
+  }
 }
 
-// Export singleton instance
 export const apiService = new ApiService();

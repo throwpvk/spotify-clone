@@ -1,6 +1,6 @@
 /**
  * Library Module
- * Module xử lý việc render library items (playlists, artists, liked tracks)
+ * Xử lý render library items
  */
 
 class Library {
@@ -11,14 +11,14 @@ class Library {
   }
 
   /**
-   * Render toàn bộ library
+   * Render library
    */
   async renderLibrary() {
     try {
       if (window.spotifyApp && window.spotifyApp.getService) {
         const authService = window.spotifyApp.getService("auth");
 
-        // Chỉ render library nếu user đã đăng nhập
+        // Chỉ render nếu user đã đăng nhập
         if (authService && authService.isUserAuthenticated()) {
           await this._loadLibraryData();
           this._renderLibraryItems();
@@ -30,7 +30,7 @@ class Library {
   }
 
   /**
-   * Load dữ liệu library từ API
+   * Load library data
    */
   async _loadLibraryData() {
     try {
@@ -38,21 +38,21 @@ class Library {
         const apiService = window.spotifyApp.getService("api");
 
         if (apiService) {
-          // Sử dụng API service để load library data
+          // Load library data
           const libraryData = await apiService.loadLibraryData();
           
           this.likedTracks = libraryData.likedTracks;
           this.followedPlaylists = libraryData.followedPlaylists;
           this.followedArtists = libraryData.followedArtists;
 
-          console.log("Library data loaded successfully");
+          console.log("Load library thành công");
           console.log(`Liked tracks:`, this.likedTracks);
           console.log(`Followed playlists:`, this.followedPlaylists);
           console.log(`Followed artists:`, this.followedArtists);
         }
       }
     } catch (error) {
-      console.error("Error loading library data:", error);
+      console.error("Lỗi load library:", error);
     }
   }
 
@@ -66,10 +66,10 @@ class Library {
       return;
     }
 
-    // Clear existing content
+    // Xóa nội dung cũ
     libraryContent.innerHTML = "";
 
-    // Render Liked Songs (luôn hiển thị đầu tiên)
+    // Render Liked Songs (hiển thị đầu tiên)
     this._renderLikedSongs(libraryContent);
 
     // Render followed playlists
@@ -110,7 +110,7 @@ class Library {
       </div>
     `;
 
-    // Add click event
+    // Thêm click event
     likedSongsItem.addEventListener("click", () => {
       this._handleLikedSongsClick();
     });
@@ -152,7 +152,7 @@ class Library {
       </div>
     `;
 
-    // Add click event
+    // Thêm click event
     playlistItem.addEventListener("click", () => {
       this._handlePlaylistClick(playlist);
     });
@@ -189,7 +189,7 @@ class Library {
       </div>
     `;
 
-    // Add click event
+    // Thêm click event
     artistItem.addEventListener("click", () => {
       this._handleArtistClick(artist);
     });
@@ -203,7 +203,10 @@ class Library {
   _handleLikedSongsClick() {
     console.log("Liked Songs clicked");
 
-    // Hiển thị toast thông báo
+    // Cập nhật active state
+    this._updateActiveState("liked");
+
+    // Hiển thị toast
     if (window.spotifyApp && window.spotifyApp.getService) {
       const uiService = window.spotifyApp.getService("ui");
       const home = window.spotifyApp.getService("home");
@@ -227,14 +230,16 @@ class Library {
   _handlePlaylistClick(playlist) {
     console.log("Playlist clicked:", playlist);
 
-    // Hiển thị toast thông báo
+    // Cập nhật active state
+    this._updateActiveState("playlist", playlist.id);
+
+    // Hiển thị toast
     if (window.spotifyApp && window.spotifyApp.getService) {
       const uiService = window.spotifyApp.getService("ui");
       const home = window.spotifyApp.getService("home");
       if (uiService) {
         uiService.showToast(`Open ${playlist.name || playlist.title}`, "info");
       }
-      console.log(playlist);
       if (home) {
         home.setDetailContent(playlist);
         home.hideHome();
@@ -248,7 +253,10 @@ class Library {
   _handleArtistClick(artist) {
     console.log("Artist clicked:", artist);
 
-    // Hiển thị toast thông báo
+    // Cập nhật active state
+    this._updateActiveState("artist", artist.id);
+
+    // Hiển thị toast
     if (window.spotifyApp && window.spotifyApp.getService) {
       const uiService = window.spotifyApp.getService("ui");
       const home = window.spotifyApp.getService("home");
@@ -262,6 +270,130 @@ class Library {
         home.setDetailContent(artist);
         home.hideHome();
       }
+    }
+  }
+
+  /**
+   * Thiết lập follow button events cho library
+   */
+  _setupLibraryFollowButtonEvents() {
+    const followBtn = document.querySelector(".library-btn.add, .library-btn.remove"); // Select cả add và remove
+    if (!followBtn) return;
+
+    followBtn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      
+      const id = followBtn.getAttribute("data-id");
+      const type = followBtn.getAttribute("data-type");
+      
+      if (!id || !type) return;
+
+      try {
+        const apiService = window.spotifyApp.getService("api");
+        const uiService = window.spotifyApp.getService("ui");
+        
+        if (!apiService) return;
+
+        // Disable button trong lúc xử lý
+        followBtn.disabled = true;
+        followBtn.style.opacity = "0.5";
+
+        let isFollowed;
+        if (type === "playlist") {
+          isFollowed = await apiService.togglePlaylistFollow(id);
+        } else if (type === "artist") {
+          isFollowed = await apiService.toggleArtistFollow(id);
+        }
+
+        // Cập nhật UI
+        this._updateLibraryFollowButtonUI(followBtn, isFollowed);
+
+        // Refresh library để cập nhật lại
+        await this.refreshLibrary();
+
+        // Hiển thị toast
+        if (uiService) {
+          const message = isFollowed ? "Added to Library" : "Removed from Library";
+          uiService.showToast(message, "success");
+        }
+
+      } catch (error) {
+        console.error("Lỗi follow/unfollow:", error);
+        
+        // Hiển thị toast lỗi
+        const uiService = window.spotifyApp.getService("ui");
+        if (uiService) {
+          uiService.showToast("Có lỗi xảy ra", "error");
+        }
+      } finally {
+        // Enable button
+        followBtn.disabled = false;
+        followBtn.style.opacity = "1";
+      }
+    });
+  }
+
+  /**
+   * Cập nhật UI của follow button trong library
+   */
+  _updateLibraryFollowButtonUI(button, isFollowed) {
+    const icon = button.querySelector("i");
+    
+    if (isFollowed) {
+      // Đã follow - hiển thị dấu check
+      icon.className = "fa-solid fa-circle-check";
+      button.setAttribute("data-label", "Remove from Library");
+      button.classList.remove("add");
+      button.classList.add("remove");
+    } else {
+      // Chưa follow - hiển thị dấu plus
+      icon.className = "fa-solid fa-circle-plus";
+      button.setAttribute("data-label", "Add to Library");
+      button.classList.remove("remove");
+      button.classList.add("add");
+    }
+  }
+
+  /**
+   * Cập nhật active state cho library items
+   */
+  _updateActiveState(type, id = null) {
+    const libraryItems = document.querySelectorAll(".library-item");
+    
+    // Xóa active class từ tất cả items
+    libraryItems.forEach(item => {
+      item.classList.remove("active");
+    });
+
+    // Thêm active class cho item được click
+    if (type === "liked") {
+      const likedItem = document.querySelector('.library-item[data-type="liked"]');
+      if (likedItem) {
+        likedItem.classList.add("active");
+      }
+    } else if (type === "playlist" && id) {
+      const playlistItem = document.querySelector(`.library-item[data-type="playlist"][data-id="${id}"]`);
+      if (playlistItem) {
+        playlistItem.classList.add("active");
+      }
+    } else if (type === "artist" && id) {
+      const artistItem = document.querySelector(`.library-item[data-type="artist"][data-id="${id}"]`);
+      if (artistItem) {
+        artistItem.classList.add("active");
+      }
+    }
+  }
+
+  /**
+   * Xóa item khỏi library khi unfollow
+   */
+  async _removeFromLibrary(id, type) {
+    try {
+      // Refresh library data từ server để đảm bảo đồng bộ
+      await this._loadLibraryData();
+      this._renderLibraryItems();
+    } catch (error) {
+      console.error("Lỗi xóa khỏi library:", error);
     }
   }
 
@@ -281,6 +413,48 @@ class Library {
   async refreshLibrary() {
     await this._loadLibraryData();
     this._renderLibraryItems();
+    
+    // Áp dụng lại chế độ lọc hiện tại sau khi refresh
+    this._applyCurrentFilter();
+  }
+
+  /**
+   * Áp dụng chế độ lọc hiện tại
+   */
+  _applyCurrentFilter() {
+    const playlistTab = document.querySelector(".tab-playlist");
+    const artistTab = document.querySelector(".tab-artist");
+    const libraryContent = document.querySelector(".library-content");
+    
+    if (!playlistTab || !artistTab || !libraryContent) return;
+
+    // Kiểm tra trạng thái hiện tại của các tab
+    const isPlaylistActive = playlistTab.classList.contains("active");
+    const isArtistActive = artistTab.classList.contains("active");
+
+    const items = libraryContent.querySelectorAll(".library-item");
+    
+    items.forEach((item) => {
+      const type = item.dataset.type?.toLowerCase() || "";
+      
+      if (isPlaylistActive) {
+        // Chỉ hiển thị playlist và liked
+        item.style.display = (type === "playlist" || type === "liked") ? "" : "none";
+      } else if (isArtistActive) {
+        // Chỉ hiển thị artist
+        item.style.display = type === "artist" ? "" : "none";
+      } else {
+        // Hiển thị tất cả
+        item.style.display = "";
+      }
+    });
+  }
+
+  /**
+   * Setup follow button events cho library
+   */
+  setupLibraryFollowButtonEvents() {
+    this._setupLibraryFollowButtonEvents();
   }
 }
 

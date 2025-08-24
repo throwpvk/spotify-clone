@@ -1,10 +1,10 @@
 /**
- * Application Configuration Constants
- * Cấu hình chung cho ứng dụng Spotify Clone
+ * App Configuration
+ * Cấu hình chung cho app
  */
 
 export const APP_CONFIG = {
-  // Thông tin ứng dụng
+  // Thông tin app
   APP_NAME: "Spotify Clone",
   VERSION: "1.0.0",
   DESCRIPTION: "Ứng dụng nghe nhạc trực tuyến",
@@ -16,7 +16,7 @@ export const APP_CONFIG = {
     RETRY_ATTEMPTS: 3,
   },
 
-  // Storage Keys - Cho việc lưu trữ authentication
+  // Storage Keys
   STORAGE_KEYS: {
     AUTH_TOKEN: "spotify_auth_token",
     USER_DATA: "spotify_user_data",
@@ -28,7 +28,7 @@ export const APP_CONFIG = {
     // Email validation
     EMAIL_REGEX: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
 
-    // Password validation - tối thiểu 6 ký tự, bao gồm chữ hoa, thường và số
+    // Password validation - tối thiểu 6 ký tự
     PASSWORD_REGEX: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{6,}$/,
     PASSWORD_MIN_LENGTH: 6,
 

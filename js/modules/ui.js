@@ -662,7 +662,18 @@ class UIService {
       const items = libraryContent.querySelectorAll(".library-item");
       items.forEach((item) => {
         const type = item.dataset.type?.toLowerCase() || "";
-        item.style.display = type === hideType.toLowerCase() ? "none" : "";
+        
+        // Xử lý đặc biệt cho liked - coi như playlist
+        if (hideType.toLowerCase() === "playlist") {
+          // Ẩn cả playlist và liked
+          item.style.display = (type === "playlist" || type === "liked") ? "none" : "";
+        } else if (hideType.toLowerCase() === "artist") {
+          // Ẩn artist
+          item.style.display = type === "artist" ? "none" : "";
+        } else {
+          // Hiện tất cả
+          item.style.display = "";
+        }
       });
     }
 
@@ -731,7 +742,8 @@ class UIService {
           // Kiểm tra điều kiện lọc theo tab
           let typeMatch = true;
           if (isPlaylistActive) {
-            typeMatch = type === "playlist";
+            // Coi liked như playlist
+            typeMatch = type === "playlist" || type === "liked";
           } else if (isArtistActive) {
             typeMatch = type === "artist";
           } // else không filter theo type

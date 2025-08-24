@@ -1,6 +1,6 @@
 /**
  * Home Module
- * Module xử lý việc render Home page và navigation
+ * Xử lý render Home page và navigation
  */
 
 class Home {
@@ -9,28 +9,21 @@ class Home {
   }
 
   /**
-   * Khởi tạo renderer
+   * Khởi tạo
    */
   _init() {
-    // Render Home page sau khi DOM đã sẵn sàng
-    setTimeout(() => {
-      this.renderHomePage();
-    }, 2000); // Delay 2 giây để đảm bảo các service khác đã khởi tạo
-
-    // TODO: fix để không cần delay 2 giây
-
-    // Thiết lập common events
+    // Thiết lập events
     this._setupCommonEvents();
   }
 
   /**
-   * Render toàn bộ trang Home
+   * Render Home page
    */
   renderHomePage() {
     if (window.spotifyApp && window.spotifyApp.getService) {
       const apiService = window.spotifyApp.getService("api");
       if (apiService) {
-        // Render Today's biggest hits
+        // Render Today's hits
         const allPlaylists = apiService.getCachedPlaylists();
         this.renderAllPlaylist(allPlaylists);
 
@@ -42,7 +35,7 @@ class Home {
   }
 
   /**
-   * Render "Today's biggest hits" section
+   * Render Today's hits
    */
   renderAllPlaylist(playlists) {
     const container = document.querySelector(".hits-grid");
@@ -54,26 +47,26 @@ class Home {
     // Clear existing content
     container.innerHTML = "";
 
-    // Validate playlists là array
+    // Kiểm tra playlists
     if (!playlists || !Array.isArray(playlists) || playlists.length === 0) {
       container.innerHTML = '<p class="no-data">Không có dữ liệu</p>';
       return;
     }
 
-    // Create container for cards
+    // Tạo container cho cards
     const cardsContainer = document.createElement("div");
     cardsContainer.className = "hits-grid-container";
 
-    // Render each playlist
+    // Render từng playlist
     playlists.forEach((playlist) => {
       const playlistCard = this._createPlaylistCard(playlist);
       cardsContainer.appendChild(playlistCard);
     });
 
-    // Add cards container to main container
+    // Thêm cards vào container
     container.appendChild(cardsContainer);
 
-    // Create navigation buttons
+    // Tạo nút navigation
     const prevBtn = document.createElement("button");
     prevBtn.className = "hits-nav-btn prev";
     prevBtn.id = "hitsPrevBtn";
@@ -87,12 +80,12 @@ class Home {
     container.appendChild(prevBtn);
     container.appendChild(nextBtn);
 
-    // Setup navigation
+    // Thiết lập navigation
     this._setupHomeNavigation();
   }
 
   /**
-   * Render "Popular artists" section
+   * Render Popular artists
    */
   renderPopularArtists(artists) {
     const container = document.querySelector(".artists-grid");
@@ -104,26 +97,26 @@ class Home {
     // Clear existing content
     container.innerHTML = "";
 
-    // Validate artists là array
+    // Kiểm tra artists
     if (!artists || !Array.isArray(artists) || artists.length === 0) {
       container.innerHTML = '<p class="no-data">Không có dữ liệu</p>';
       return;
     }
 
-    // Create container for cards
+    // Tạo container cho cards
     const cardsContainer = document.createElement("div");
     cardsContainer.className = "artists-grid-container";
 
-    // Render each artist
+    // Render từng artist
     artists.forEach((artist) => {
       const artistCard = this._createArtistCard(artist);
       cardsContainer.appendChild(artistCard);
     });
 
-    // Add cards container to main container
+    // Thêm cards vào container
     container.appendChild(cardsContainer);
 
-    // Create navigation buttons
+    // Tạo nút navigation
     const prevBtn = document.createElement("button");
     prevBtn.className = "artists-nav-btn prev";
     prevBtn.id = "artistsPrevBtn";
@@ -137,12 +130,12 @@ class Home {
     container.appendChild(prevBtn);
     container.appendChild(nextBtn);
 
-    // Setup navigation
+    // Thiết lập navigation
     this._setupHomeNavigation();
   }
 
   /**
-   * Tạo playlist card element
+   * Tạo playlist card
    */
   _createPlaylistCard(playlist) {
     const card = document.createElement("div");
@@ -170,7 +163,7 @@ class Home {
       </div>
     `;
 
-    // Add click event
+    // Thêm click event
     card.addEventListener("click", () => {
       this._handlePlaylistClick(playlist);
     });
@@ -179,7 +172,7 @@ class Home {
   }
 
   /**
-   * Tạo artist card element
+   * Tạo artist card
    */
   _createArtistCard(artist) {
     const card = document.createElement("div");
@@ -205,7 +198,7 @@ class Home {
       </div>
     `;
 
-    // Add click event
+    // Thêm click event
     card.addEventListener("click", () => {
       this._handleArtistClick(artist);
     });
@@ -230,14 +223,14 @@ class Home {
   }
 
   /**
-   * Xử lý click vào playlist
+   * Xử lý click playlist
    */
   _handlePlaylistClick(playlist) {
     console.log("Playlist clicked:", playlist);
     this.setDetailContent(playlist);
     this.hideHome();
 
-    // Hiển thị toast thông báo
+    // Hiển thị toast
     if (window.spotifyApp && window.spotifyApp.getService) {
       const uiService = window.spotifyApp.getService("ui");
       if (uiService) {
@@ -247,14 +240,14 @@ class Home {
   }
 
   /**
-   * Xử lý click vào artist
+   * Xử lý click artist
    */
   _handleArtistClick(artist) {
     console.log("Artist clicked:", artist);
     this.setDetailContent(artist);
     this.hideHome();
 
-    // Hiển thị toast thông báo
+    // Hiển thị toast
     if (window.spotifyApp && window.spotifyApp.getService) {
       const uiService = window.spotifyApp.getService("ui");
       if (uiService) {
@@ -271,6 +264,13 @@ class Home {
    */
   setDetailContent(data) {
     const detailContainer = document.querySelector(".detail-container");
+
+    // Kiểm tra follow status
+    const apiService = window.spotifyApp.getService("api");
+    const isPlaylist = !data.is_verified;
+    const isFollowed = apiService ? 
+      (isPlaylist ? apiService.isPlaylistFollowed(data.id) : apiService.isArtistFollowed(data.id)) 
+      : false;
 
     const tracksHtml = (tracks) =>
       tracks
@@ -361,8 +361,8 @@ class Home {
               </button>
               ${
                 data.name !== "Liked Songs"
-                  ? `<button data-label="Add To Library" class="btn library-btn add">
-                      <i class="fa-solid fa-circle-plus"></i>
+                  ? `<button data-label="${isFollowed ? 'Remove from Library' : 'Add to Library'}" class="btn library-btn ${isFollowed ? 'remove' : 'add'}" data-id="${data.id}" data-type="${!data.is_verified ? 'playlist' : 'artist'}">
+                      <i class="fa-solid ${isFollowed ? 'fa-circle-check' : 'fa-circle-plus'}"></i>
                     </button>`
                   : ""
               }
@@ -379,10 +379,13 @@ class Home {
             </section>
     `;
     detailContainer.innerHTML = html;
+    
+    // Thiết lập follow button events
+    this._setupFollowButtonEvents();
   }
 
   /**
-   * Thiết lập navigation cho Home page
+   * Thiết lập navigation
    */
   _setupHomeNavigation() {
     // Hits navigation
@@ -417,17 +420,17 @@ class Home {
   }
 
   /**
-   * Thiết lập carousel navigation cho một container
+   * Thiết lập carousel navigation
    */
   _setupCarouselNavigation(container, prevBtn, nextBtn, cardWidth, gap) {
-    if (!container || !prevBtn || !nextBtn) return () => {}; // nếu thiếu phần tử thì bỏ qua
+    if (!container || !prevBtn || !nextBtn) return () => {}; // bỏ qua nếu thiếu phần tử
 
     let currentPosition = 0;
     const totalCards = container.children.length;
     let resizeTimeout;
     const scrollStep = 3;
 
-    // Tính số card hiển thị được trong khung
+    // Tính số card hiển thị
     const calculateVisibleCards = () => {
       if (!container.parentElement) return 1;
       const containerWidth = container.parentElement.offsetWidth || 0;
@@ -437,16 +440,16 @@ class Home {
     let visibleCards = calculateVisibleCards();
     let maxPosition = Math.max(0, totalCards - visibleCards);
 
-    // Cập nhật trạng thái nút prev/next
+    // Cập nhật trạng thái nút
     const updateButtonStates = () => {
-      const shouldShowNav = totalCards > visibleCards; // chỉ hiện khi có nhiều card hơn khung
+      const shouldShowNav = totalCards > visibleCards; // chỉ hiện khi có nhiều card
       prevBtn.style.display =
         shouldShowNav && currentPosition > 0 ? "block" : "none";
       nextBtn.style.display =
         shouldShowNav && currentPosition < maxPosition ? "block" : "none";
     };
 
-    // Di chuyển tới vị trí mới
+    // Di chuyển tới vị trí
     const moveToPosition = (position) => {
       currentPosition = Math.max(0, Math.min(position, maxPosition));
       const translateX = -currentPosition * (cardWidth + gap);
@@ -475,7 +478,7 @@ class Home {
     // Trạng thái ban đầu
     updateButtonStates();
 
-    // Xử lý khi resize (debounce)
+    // Xử lý resize (debounce)
     const handleResize = () => {
       clearTimeout(resizeTimeout);
       resizeTimeout = setTimeout(() => {
@@ -489,7 +492,7 @@ class Home {
           currentPosition = newMaxPosition;
         }
 
-        // Tạm bỏ transition để reposition nhanh
+        // Bỏ transition để reposition nhanh
         container.style.transition = "none";
         moveToPosition(currentPosition);
 
@@ -511,7 +514,7 @@ class Home {
   }
 
   /**
-   * Thiết lập common events
+   * Thiết lập events
    */
   _setupCommonEvents() {
     const logo = document.querySelector(".logo > i");
@@ -523,6 +526,91 @@ class Home {
 
     if (homeBtn) {
       homeBtn.addEventListener("click", () => this._showHome());
+    }
+  }
+
+  /**
+   * Thiết lập follow button events
+   */
+  _setupFollowButtonEvents() {
+    const followBtn = document.querySelector(".library-btn.add, .library-btn.remove"); // Select cả add và remove
+    if (!followBtn) return;
+
+    followBtn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      
+      const id = followBtn.getAttribute("data-id");
+      const type = followBtn.getAttribute("data-type");
+      
+      if (!id || !type) return;
+
+      try {
+        const apiService = window.spotifyApp.getService("api");
+        const uiService = window.spotifyApp.getService("ui");
+        
+        if (!apiService) return;
+
+        // Disable button trong lúc xử lý
+        followBtn.disabled = true;
+        followBtn.style.opacity = "0.5";
+
+        let isFollowed;
+        if (type === "playlist") {
+          isFollowed = await apiService.togglePlaylistFollow(id);
+        } else if (type === "artist") {
+          isFollowed = await apiService.toggleArtistFollow(id);
+        }
+
+        // Cập nhật UI
+        this._updateFollowButtonUI(followBtn, isFollowed);
+
+        // Refresh library để cập nhật lại
+        const library = window.spotifyApp.getService("library");
+        if (library) {
+          await library.refreshLibrary();
+        }
+
+        // Hiển thị toast
+        if (uiService) {
+          const message = isFollowed ? "Added to Library" : "Removed from Library";
+          uiService.showToast(message, "success");
+        }
+
+      } catch (error) {
+        console.error("Lỗi follow/unfollow:", error);
+        
+        // Hiển thị toast lỗi
+        const uiService = window.spotifyApp.getService("ui");
+        if (uiService) {
+          uiService.showToast("Có lỗi xảy ra", "error");
+        }
+      } finally {
+        // Enable button
+        followBtn.disabled = false;
+        followBtn.style.opacity = "1";
+      }
+    });
+  }
+
+  /**
+   * Cập nhật UI của follow button
+   */
+  _updateFollowButtonUI(button, isFollowed) {
+    const icon = button.querySelector("i");
+    const label = button.getAttribute("data-label");
+    
+    if (isFollowed) {
+      // Đã follow - hiển thị dấu check
+      icon.className = "fa-solid fa-circle-check";
+      button.setAttribute("data-label", "Remove from Library");
+      button.classList.remove("add");
+      button.classList.add("remove");
+    } else {
+      // Chưa follow - hiển thị dấu plus
+      icon.className = "fa-solid fa-circle-plus";
+      button.setAttribute("data-label", "Add to Library");
+      button.classList.remove("remove");
+      button.classList.add("add");
     }
   }
 }

@@ -1,6 +1,6 @@
 /**
- * API Endpoints Configuration
- * Cấu hình các endpoint API
+ * API Endpoints
+ * Cấu hình endpoints API
  */
 
 export const API = {

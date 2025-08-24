@@ -1,7 +1,3 @@
-/**
- * Main Application Entry Point
- */
-
 import { authService } from "./modules/auth.js";
 import { uiService } from "./modules/ui.js";
 import { apiService } from "./modules/api.js";
@@ -16,21 +12,19 @@ class SpotifyApp {
   }
 
   /**
-   * Khởi tạo ứng dụng
+   * Khởi tạo app
    */
   _init() {
     try {
-      // Đăng ký các services
+      // Đăng ký services
       this.services.set("auth", authService);
       this.services.set("ui", uiService);
       this.services.set("api", apiService);
       this.services.set("home", home);
       this.services.set("library", library);
       this.services.set("authUI", authUI);
-
-      console.log("Spotify Clone App initialized successfully!");
     } catch (error) {
-      console.error("Error initializing Spotify App:", error);
+      console.error("Lỗi khởi tạo app:", error);
     }
   }
 
@@ -43,6 +37,17 @@ class SpotifyApp {
 }
 
 // Khởi tạo ứng dụng khi DOM đã sẵn sàng
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   window.spotifyApp = new SpotifyApp();
+  
+  // Load content data (không cần auth)
+  await window.spotifyApp.getService("api").loadContentData();
+  
+  // Kiểm tra auth trước khi load library
+  const authService = window.spotifyApp.getService("auth");
+  if (authService && authService.isUserAuthenticated()) {
+    await window.spotifyApp.getService("api").loadLibraryData();
+  }
+  
+  window.spotifyApp.getService("home").renderHomePage();
 });
