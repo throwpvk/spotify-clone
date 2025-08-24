@@ -8,7 +8,6 @@ import { apiService } from "./modules/api.js";
 import { home } from "./modules/home.js";
 import { library } from "./modules/library.js";
 import { authUI } from "./modules/auth-ui.js";
-import { contentService } from "./modules/content.js";
 
 class SpotifyApp {
   constructor() {
@@ -28,7 +27,6 @@ class SpotifyApp {
       this.services.set("home", home);
       this.services.set("library", library);
       this.services.set("authUI", authUI);
-      this.services.set("content", contentService);
 
       console.log("Spotify Clone App initialized successfully!");
     } catch (error) {

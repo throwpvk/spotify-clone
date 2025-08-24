@@ -15,7 +15,9 @@ class Home {
     // Render Home page sau khi DOM đã sẵn sàng
     setTimeout(() => {
       this.renderHomePage();
-    }, 1000); // Delay 1 giây để đảm bảo các service khác đã khởi tạo
+    }, 2000); // Delay 2 giây để đảm bảo các service khác đã khởi tạo
+
+    // TODO: fix để không cần delay 2 giây
 
     // Thiết lập common events
     this._setupCommonEvents();
@@ -26,14 +28,14 @@ class Home {
    */
   renderHomePage() {
     if (window.spotifyApp && window.spotifyApp.getService) {
-      const contentService = window.spotifyApp.getService("content");
-      if (contentService) {
+      const apiService = window.spotifyApp.getService("api");
+      if (apiService) {
         // Render Today's biggest hits
-        const allPlaylists = contentService.getAllPlaylists();
+        const allPlaylists = apiService.getCachedPlaylists();
         this.renderAllPlaylist(allPlaylists);
 
         // Render Popular artists
-        const popularArtists = contentService.getPopularArtists();
+        const popularArtists = apiService.getCachedArtists();
         this.renderPopularArtists(popularArtists);
       }
     }

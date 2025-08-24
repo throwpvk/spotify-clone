@@ -38,75 +38,12 @@ class Library {
         const apiService = window.spotifyApp.getService("api");
 
         if (apiService) {
-          // Load song song cả 3 API
-          const [likedTracksRes, followedPlaylistsRes, followedArtistsRes] =
-            await Promise.all([
-              apiService.getLikedTracks(),
-              apiService.getFollowedPlaylists(),
-              apiService.getFollowedArtists(),
-            ]);
-
-          // Xử lý liked tracks
-          if (likedTracksRes.success) {
-            const tracks =
-              likedTracksRes.data.tracks || likedTracksRes.data || [];
-
-            this.likedTracks = {
-              name: "Liked Songs",
-              tracks,
-            };
-          }
-
-          // Xử lý followed playlists
-          if (followedPlaylistsRes.success) {
-            this.followedPlaylists =
-              followedPlaylistsRes.data.playlists ||
-              followedPlaylistsRes.data ||
-              [];
-
-            // Gọi song song lấy tracks cho từng playlist
-            await Promise.all(
-              this.followedPlaylists.map(async (playlist) => {
-                try {
-                  const resTracks = await apiService.getPlaylistAllTracksById(
-                    playlist.id
-                  );
-                  playlist.tracks = resTracks.success
-                    ? resTracks.data.tracks || resTracks.data || []
-                    : [];
-                } catch (err) {
-                  console.error(
-                    `Lỗi khi lấy tracks playlist ${playlist.id}:`,
-                    err
-                  );
-                  playlist.tracks = [];
-                }
-              })
-            );
-          }
-
-          // Xử lý followed artists
-          if (followedArtistsRes.success) {
-            this.followedArtists =
-              followedArtistsRes.data.artists || followedArtistsRes.data || [];
-
-            // Gọi song song lấy tracks cho từng artist
-            await Promise.all(
-              this.followedArtists.map(async (artist) => {
-                try {
-                  const resTracks = await apiService.getArtistAllTracksById(
-                    artist.id
-                  );
-                  artist.tracks = resTracks.success
-                    ? resTracks.data.tracks || resTracks.data || []
-                    : [];
-                } catch (err) {
-                  console.error(`Lỗi khi lấy tracks artist ${artist.id}:`, err);
-                  artist.tracks = [];
-                }
-              })
-            );
-          }
+          // Sử dụng API service để load library data
+          const libraryData = await apiService.loadLibraryData();
+          
+          this.likedTracks = libraryData.likedTracks;
+          this.followedPlaylists = libraryData.followedPlaylists;
+          this.followedArtists = libraryData.followedArtists;
 
           console.log("Library data loaded successfully");
           console.log(`Liked tracks:`, this.likedTracks);

@@ -1,6 +1,6 @@
 /**
  * API Service Module
- * Service xử lý tất cả HTTP requests đến API
+ * Service xử lý tất cả HTTP requests đến API và content management
  */
 
 import { API, APP_CONFIG } from "../constants/index.js";
@@ -10,6 +10,24 @@ class ApiService {
     this.baseURL = APP_CONFIG.API.BASE_URL;
     this.timeout = APP_CONFIG.API.TIMEOUT;
     this.retryAttempts = APP_CONFIG.API.RETRY_ATTEMPTS;
+    
+    // Content data storage
+    this.todaysHits = [];
+    this.popularArtists = [];
+    this.isLoading = false;
+    
+    this._init();
+  }
+
+  /**
+   * Khởi tạo service
+   */
+  async _init() {
+    try {
+      await this._loadContentData();
+    } catch (error) {
+      console.error("Error initializing API service:", error);
+    }
   }
 
   // ===== REQUEST METHODS =====
@@ -208,7 +226,7 @@ class ApiService {
   // ===== PLAYLISTS API (Today's biggest hits) =====
 
   /**
-   * Lấy tất cả playlists
+   * Lấy tất cả playlists từ API
    */
   async getAllPlaylists(limit = 20, offset = 0) {
     const params = new URLSearchParams({
@@ -219,13 +237,6 @@ class ApiService {
   }
 
   /**
-   * Lấy playlist theo ID
-   */
-  // async getPlaylistById(id) {
-  //   return this.get(`${this.baseURL + API.PLAYLISTS.GET_BY_ID}/${id}`);
-  // }
-
-  /**
    * Lấy All Tracks của Playlist theo Playlist ID
    */
   async getPlaylistAllTracksById(id) {
@@ -233,21 +244,6 @@ class ApiService {
       `${this.baseURL + API.PLAYLISTS.GET_ALL_TRACKS_BY_ID}/${id}/tracks`
     );
   }
-
-  /**
-   * Lấy playlists của user hiện tại - Cần authentication
-   */
-  // async getMyPlaylists(limit = 20, offset = 0) {
-  //   if (!this._hasAuthToken()) {
-  //     throw new Error("Authentication required");
-  //   }
-
-  //   const params = new URLSearchParams({
-  //     limit: limit.toString(),
-  //     offset: offset.toString(),
-  //   });
-  //   return this.get(`${this.baseURL + API.ME.PLAYLISTS}?${params}`);
-  // }
 
   // ===== ARTISTS API (Popular artists) =====
 
@@ -262,12 +258,6 @@ class ApiService {
     return this.get(`${this.baseURL + API.ARTISTS.GET_ALL}?${params}`);
   }
 
-  /**
-   * Lấy artist theo ID
-   */
-  // async getArtistById(id) {
-  //   return this.get(`${this.baseURL + API.ARTISTS.GET_BY_ID}/${id}`);
-  // }
   /**
    * Lấy Popular Tracks của Artist theo Artist ID
    */
@@ -390,6 +380,223 @@ class ApiService {
     }
 
     return this.delete(`${this.baseURL}/tracks/${trackId}/like`);
+  }
+
+  // ===== CONTENT MANAGEMENT METHODS =====
+
+  /**
+   * Load tất cả dữ liệu content
+   */
+  async _loadContentData() {
+    try {
+      this.isLoading = true;
+
+      // Load song song cả hai API
+      const [playlistsResponse, artistsResponse] = await Promise.all([
+        this._loadAllPlaylistsWithTracks(),
+        this._loadPopularArtistsWithTracks(),
+      ]);
+
+      this.todaysHits = playlistsResponse;
+      this.popularArtists = artistsResponse;
+
+      console.log("Content data loaded successfully");
+      console.log(`- Today's biggest hits: ${this.todaysHits.length} items`);
+      console.log(`- Popular artists: ${this.popularArtists.length} items`);
+    } catch (error) {
+      console.error("Error loading content data:", error);
+      this.todaysHits = [];
+      this.popularArtists = [];
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  /**
+   * Load "Today's biggest hits" với tracks - API Playlists/Get All Playlists
+   */
+  async _loadAllPlaylistsWithTracks() {
+    try {
+      const response = await this.getAllPlaylists(20, 0);
+
+      if (response.success) {
+        // API trả về { playlists: [...] }
+        const playlists = response.data.playlists || response.data || [];
+
+        // Gọi song song lấy tracks cho từng playlist
+        await Promise.all(
+          playlists.map(async (playlist) => {
+            try {
+              const resTracks = await this.getPlaylistAllTracksById(playlist.id);
+              playlist.tracks = resTracks.success
+                ? resTracks.data.tracks || resTracks.data || []
+                : [];
+            } catch (err) {
+              console.error(`Lỗi khi lấy tracks playlist ${playlist.id}:`, err);
+              playlist.tracks = [];
+            }
+          })
+        );
+
+        console.log("Today's biggest hits loaded:", playlists);
+        return playlists;
+      } else {
+        console.error("Failed to load Today's biggest hits");
+        return [];
+      }
+    } catch (error) {
+      console.error("Error loading Today's biggest hits:", error);
+      return [];
+    }
+  }
+
+  /**
+   * Load "Popular artists" với tracks - API Artists/Get All Artists
+   */
+  async _loadPopularArtistsWithTracks() {
+    try {
+      const response = await this.getAllArtists(20, 0);
+
+      if (response.success) {
+        // API trả về { artists: [...] } thay vì trực tiếp array
+        const artists = response.data.artists || response.data || [];
+
+        // gọi song song lấy tracks cho từng artist
+        await Promise.all(
+          artists.map(async (artist) => {
+            try {
+              const resTracks = await this.getArtistAllTracksById(artist.id);
+              artist.tracks = resTracks.success
+                ? resTracks.data.tracks || resTracks.data || []
+                : [];
+            } catch (err) {
+              console.error(`Lỗi khi lấy tracks cho artist ${artist.id}:`, err);
+              artist.tracks = [];
+            }
+          })
+        );
+        console.log("Popular artists loaded:", artists);
+        return artists;
+      } else {
+        console.error("Failed to load Popular artists");
+        return [];
+      }
+    } catch (error) {
+      console.error("Error loading Popular artists:", error);
+      return [];
+    }
+  }
+
+  /**
+   * Load library data với tracks
+   */
+  async loadLibraryData() {
+    try {
+      if (!this._hasAuthToken()) {
+        throw new Error("Authentication required");
+      }
+
+      // Load song song cả 3 API
+      const [likedTracksRes, followedPlaylistsRes, followedArtistsRes] =
+        await Promise.all([
+          this.getLikedTracks(),
+          this.getFollowedPlaylists(),
+          this.getFollowedArtists(),
+        ]);
+
+      const result = {
+        likedTracks: null,
+        followedPlaylists: [],
+        followedArtists: [],
+      };
+
+      // Xử lý liked tracks
+      if (likedTracksRes.success) {
+        const tracks = likedTracksRes.data.tracks || likedTracksRes.data || [];
+        result.likedTracks = {
+          name: "Liked Songs",
+          tracks,
+        };
+      }
+
+      // Xử lý followed playlists
+      if (followedPlaylistsRes.success) {
+        const playlists =
+          followedPlaylistsRes.data.playlists ||
+          followedPlaylistsRes.data ||
+          [];
+
+        // Gọi song song lấy tracks cho từng playlist
+        await Promise.all(
+          playlists.map(async (playlist) => {
+            try {
+              const resTracks = await this.getPlaylistAllTracksById(playlist.id);
+              playlist.tracks = resTracks.success
+                ? resTracks.data.tracks || resTracks.data || []
+                : [];
+            } catch (err) {
+              console.error(
+                `Lỗi khi lấy tracks playlist ${playlist.id}:`,
+                err
+              );
+              playlist.tracks = [];
+            }
+          })
+        );
+        result.followedPlaylists = playlists;
+      }
+
+      // Xử lý followed artists
+      if (followedArtistsRes.success) {
+        const artists =
+          followedArtistsRes.data.artists || followedArtistsRes.data || [];
+
+        // Gọi song song lấy tracks cho từng artist
+        await Promise.all(
+          artists.map(async (artist) => {
+            try {
+              const resTracks = await this.getArtistAllTracksById(artist.id);
+              artist.tracks = resTracks.success
+                ? resTracks.data.tracks || resTracks.data || []
+                : [];
+            } catch (err) {
+              console.error(`Lỗi khi lấy tracks artist ${artist.id}:`, err);
+              artist.tracks = [];
+            }
+          })
+        );
+        result.followedArtists = artists;
+      }
+
+      console.log("Library data loaded successfully:", result);
+      return result;
+    } catch (error) {
+      console.error("Error loading library data:", error);
+      throw error;
+    }
+  }
+
+  // ===== PUBLIC CONTENT METHODS =====
+
+  /**
+   * Refresh dữ liệu content
+   */
+  async refreshContentData() {
+    await this._loadContentData();
+  }
+
+  /**
+   * Lấy dữ liệu "Today's biggest hits" đã được cache
+   */
+  getCachedPlaylists() {
+    return this.todaysHits;
+  }
+
+  /**
+   * Lấy dữ liệu "Popular artists" đã được cache
+   */
+  getCachedArtists() {
+    return this.popularArtists;
   }
 }
 
