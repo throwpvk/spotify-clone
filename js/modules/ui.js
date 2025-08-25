@@ -227,14 +227,12 @@ class UIService {
       case "unfollow":
         if (type === "artist") {
           this._handleUnfollowArtist(name, element);
-          console.log(element);
         }
         break;
 
       case "remove":
         if (type === "playlist") {
           this._handleRemovePlaylist(name, element);
-          console.log(element);
         }
         break;
 
@@ -252,8 +250,6 @@ class UIService {
    * Xử lý unfollow artist
    */
   _handleUnfollowArtist(artistName, element) {
-    console.log(`Unfollowing artist: ${artistName}`);
-
     // Hiển thị confirmation dialog
     if (confirm(`Bạn có chắc muốn unfollow "${artistName}"?`)) {
       // Thêm hiệu ứng fade out
@@ -271,8 +267,6 @@ class UIService {
    * Xử lý remove playlist from profile
    */
   _handleRemovePlaylist(playlistName, element) {
-    console.log(`Removing playlist from profile: ${playlistName}`);
-
     if (confirm(`Bạn có chắc muốn xóa "${playlistName}" khỏi profile?`)) {
       element.style.transition = "opacity 0.3s ease";
       element.style.opacity = "0";
@@ -288,8 +282,6 @@ class UIService {
    * Xử lý delete playlist
    */
   _handleDeletePlaylist(playlistName, element) {
-    console.log(`Deleting playlist: ${playlistName}`);
-
     if (
       confirm(
         `Bạn có chắc muốn xóa vĩnh viễn "${playlistName}"? Hành động này không thể hoàn tác.`
@@ -662,11 +654,12 @@ class UIService {
       const items = libraryContent.querySelectorAll(".library-item");
       items.forEach((item) => {
         const type = item.dataset.type?.toLowerCase() || "";
-        
+
         // Xử lý đặc biệt cho liked - coi như playlist
         if (hideType.toLowerCase() === "playlist") {
           // Ẩn cả playlist và liked
-          item.style.display = (type === "playlist" || type === "liked") ? "none" : "";
+          item.style.display =
+            type === "playlist" || type === "liked" ? "none" : "";
         } else if (hideType.toLowerCase() === "artist") {
           // Ẩn artist
           item.style.display = type === "artist" ? "none" : "";

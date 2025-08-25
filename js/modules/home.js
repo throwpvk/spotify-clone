@@ -647,8 +647,10 @@ class Home {
 
           if (isLiked) {
             likeBtn.querySelector("i").className = "fa-solid fa-heart";
+            likeBtn.setAttribute("data-type", "unlike-action");
           } else {
             likeBtn.querySelector("i").className = "fa-regular fa-heart";
+            likeBtn.setAttribute("data-type", "like-action");
           }
 
           // Refresh library
