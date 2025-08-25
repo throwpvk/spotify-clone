@@ -226,7 +226,6 @@ class Home {
    * Xử lý click playlist
    */
   _handlePlaylistClick(playlist) {
-    console.log("Playlist clicked:", playlist);
     this.setDetailContent(playlist);
     this.hideHome();
 
@@ -243,7 +242,6 @@ class Home {
    * Xử lý click artist
    */
   _handleArtistClick(artist) {
-    console.log("Artist clicked:", artist);
     this.setDetailContent(artist);
     this.hideHome();
 
@@ -268,8 +266,10 @@ class Home {
     // Kiểm tra follow status
     const apiService = window.spotifyApp.getService("api");
     const isPlaylist = !data.is_verified;
-    const isFollowed = apiService ? 
-      (isPlaylist ? apiService.isPlaylistFollowed(data.id) : apiService.isArtistFollowed(data.id)) 
+    const isFollowed = apiService
+      ? isPlaylist
+        ? apiService.isPlaylistFollowed(data.id)
+        : apiService.isArtistFollowed(data.id)
       : false;
 
     const tracksHtml = (tracks) =>
@@ -286,6 +286,7 @@ class Home {
             ? track.track_play_count
             : track.play_count;
           const duration = isPlaylist ? track.track_duration : track.duration;
+          const isTrackLiked = apiService.isTrackLiked(trackId);
 
           // format duration mm:ss
           const minutes = Math.floor(duration / 60);
@@ -298,23 +299,34 @@ class Home {
           const playCountStr = playCount?.toLocaleString() || "0";
 
           return `
-        <div class="track-item" data-id="${trackId}">
-          <div class="track-number">${index + 1}</div>
-          <div class="track-image">
-            <img src="${
-              image || "./assets/images/track-img.jpg?height=40&width=40"
-            }" onerror="this.src='./assets/images/track-img.jpg?height=40&width=40'"/>
-          </div>
-          <div class="track-info">
-            <div class="track-name">${title}</div>
-          </div>
-          <div class="track-plays">${playCountStr}</div>
-          <div class="track-duration">${durationStr}</div>
-          <button data-label="tooltip" class="track-menu-btn">
-            <i class="fas fa-ellipsis-h"></i>
-          </button>
-        </div>
-      `;
+            <div class="track-item" data-id="${trackId}">
+              <div class="track-number">${index + 1}</div>
+              <div class="track-image">
+                <img src="${
+                  image || "./assets/images/track-img.jpg?height=40&width=40"
+                }" onerror="this.src='./assets/images/track-img.jpg?height=40&width=40'"/>
+              </div>
+              <div class="track-info">
+                <div class="track-name">${title}</div>
+              </div>
+              <div class="track-plays">${playCountStr}</div>
+              ${
+                isTrackLiked
+                  ? `
+                  <button class="track-like-btn" data-id="${trackId}" data-type="unlike-action">
+                    <i class="fa-solid fa-heart"></i>
+                  </button>`
+                  : `
+                  <button class="track-like-btn" data-id="${trackId}" data-type="like-action">
+                    <i class="fa-regular fa-heart"></i>
+                  </button>`
+              }
+              <div class="track-duration">${durationStr}</div>
+              <button class="track-menu-btn">
+                <i class="fas fa-ellipsis-h"></i>
+              </button>
+            </div>
+        `;
         })
         .join("");
 
@@ -361,8 +373,16 @@ class Home {
               </button>
               ${
                 data.name !== "Liked Songs"
-                  ? `<button data-label="${isFollowed ? 'Remove from Library' : 'Add to Library'}" class="btn library-btn ${isFollowed ? 'remove' : 'add'}" data-id="${data.id}" data-type="${!data.is_verified ? 'playlist' : 'artist'}">
-                      <i class="fa-solid ${isFollowed ? 'fa-circle-check' : 'fa-circle-plus'}"></i>
+                  ? `<button data-label="${
+                      isFollowed ? "Remove from Library" : "Add to Library"
+                    }" class="btn library-btn ${
+                      isFollowed ? "remove" : "add"
+                    }" data-id="${data.id}" data-type="${
+                      !data.is_verified ? "playlist" : "artist"
+                    }">
+                      <i class="fa-solid ${
+                        isFollowed ? "fa-circle-check" : "fa-circle-plus"
+                      }"></i>
                     </button>`
                   : ""
               }
@@ -379,9 +399,10 @@ class Home {
             </section>
     `;
     detailContainer.innerHTML = html;
-    
+
     // Thiết lập follow button events
     this._setupFollowButtonEvents();
+    this._setupLikeButtonEvents();
   }
 
   /**
@@ -533,21 +554,23 @@ class Home {
    * Thiết lập follow button events
    */
   _setupFollowButtonEvents() {
-    const followBtn = document.querySelector(".library-btn.add, .library-btn.remove"); // Select cả add và remove
+    const followBtn = document.querySelector(
+      ".library-btn.add, .library-btn.remove"
+    ); // Select cả add và remove
     if (!followBtn) return;
 
     followBtn.addEventListener("click", async (e) => {
       e.stopPropagation();
-      
+
       const id = followBtn.getAttribute("data-id");
       const type = followBtn.getAttribute("data-type");
-      
+
       if (!id || !type) return;
 
       try {
         const apiService = window.spotifyApp.getService("api");
         const uiService = window.spotifyApp.getService("ui");
-        
+
         if (!apiService) return;
 
         // Disable button trong lúc xử lý
@@ -572,13 +595,14 @@ class Home {
 
         // Hiển thị toast
         if (uiService) {
-          const message = isFollowed ? "Added to Library" : "Removed from Library";
+          const message = isFollowed
+            ? "Added to Library"
+            : "Removed from Library";
           uiService.showToast(message, "success");
         }
-
       } catch (error) {
         console.error("Lỗi follow/unfollow:", error);
-        
+
         // Hiển thị toast lỗi
         const uiService = window.spotifyApp.getService("ui");
         if (uiService) {
@@ -592,13 +616,75 @@ class Home {
     });
   }
 
+  _setupLikeButtonEvents() {
+    const likeBtns = document.querySelectorAll(".track-like-btn");
+
+    likeBtns.forEach((likeBtn) => {
+      likeBtn.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        const id = likeBtn.getAttribute("data-id");
+        const type = likeBtn.getAttribute("data-type");
+        if (!id || !type) return;
+
+        try {
+          const apiService = window.spotifyApp.getService("api");
+          const uiService = window.spotifyApp.getService("ui");
+
+          if (!apiService) return;
+
+          // Disable button trong lúc xử lý
+          likeBtn.disabled = true;
+          likeBtn.style.opacity = "0.5";
+
+          let isLiked;
+          if (type === "like-action") {
+            await apiService.likeTrack(id);
+            isLiked = true;
+          } else if (type === "unlike-action") {
+            await apiService.unlikeTrack(id);
+            isLiked = false;
+          }
+
+          if (isLiked) {
+            likeBtn.querySelector("i").className = "fa-solid fa-heart";
+          } else {
+            likeBtn.querySelector("i").className = "fa-regular fa-heart";
+          }
+
+          // Refresh library
+          const library = window.spotifyApp.getService("library");
+          if (library) {
+            await library.refreshLibrary();
+          }
+
+          // Toast kết quả
+          if (uiService) {
+            const message = isLiked
+              ? "Added to Liked Songs"
+              : "Removed from Liked Songs";
+            uiService.showToast(message, "success");
+          }
+        } catch (error) {
+          console.error("Lỗi like/unlike:", error);
+          const uiService = window.spotifyApp.getService("ui");
+          if (uiService) {
+            uiService.showToast("Có lỗi xảy ra", "error");
+          }
+        } finally {
+          likeBtn.disabled = false;
+          likeBtn.style.opacity = "1";
+        }
+      });
+    });
+  }
+
   /**
    * Cập nhật UI của follow button
    */
   _updateFollowButtonUI(button, isFollowed) {
     const icon = button.querySelector("i");
     const label = button.getAttribute("data-label");
-    
+
     if (isFollowed) {
       // Đã follow - hiển thị dấu check
       icon.className = "fa-solid fa-circle-check";

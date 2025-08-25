@@ -26,7 +26,6 @@ class AuthService {
       this._setupStorageListener();
 
       this.isInitialized = true;
-      console.log("Auth service initialized successfully");
     } catch (error) {
       console.error("Error initializing auth service:", error);
     }
@@ -46,7 +45,7 @@ class AuthService {
       token === "null" ||
       token.trim() === ""
     ) {
-      console.log("No valid token found, clearing auth data");
+      console.warn("No valid token found, clearing auth data");
       this._clearAuthData();
       return;
     }
@@ -59,11 +58,6 @@ class AuthService {
         // Parse user data
         this.currentUser = JSON.parse(userData);
 
-        console.log(
-          "User session restored:",
-          this.currentUser.display_name || this.currentUser.username
-        );
-
         // Cập nhật UI
         this._updateUI();
       } catch (error) {
@@ -71,7 +65,7 @@ class AuthService {
         this._clearAuthData();
       }
     } else {
-      console.log("No existing session found");
+      console.warn("No existing session found");
     }
   }
 
@@ -118,13 +112,9 @@ class AuthService {
   _handleStorageChange(e) {
     if (e.key === APP_CONFIG.STORAGE_KEYS.AUTH_TOKEN) {
       if (!e.newValue) {
-        // Token bị xóa ở tab khác, logout
-        console.log("Token removed in another tab, logging out");
         this._clearAuthData();
         this._updateUI();
       } else if (e.newValue !== e.oldValue) {
-        // Token thay đổi, reload user data
-        console.log("Token changed in another tab, reloading user data");
         this._checkExistingAuth();
       }
     }
@@ -140,16 +130,6 @@ class AuthService {
       APP_CONFIG.STORAGE_KEYS.USER_DATA,
       JSON.stringify(user)
     );
-
-    console.log("Auth data saved to localStorage");
-    console.log(
-      "Access token:",
-      accessToken ? `${accessToken.substring(0, 20)}...` : "undefined"
-    );
-    console.log(
-      "Refresh token:",
-      refreshToken ? `${refreshToken.substring(0, 20)}...` : "undefined"
-    );
   }
 
   /**
@@ -161,8 +141,6 @@ class AuthService {
     localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.USER_DATA);
 
     this.currentUser = null;
-
-    console.log("Auth data cleared from localStorage");
   }
 
   /**
@@ -376,9 +354,6 @@ class AuthService {
         // Lưu authentication data
         this._saveAuthData(access_token, refresh_token, user);
         this.currentUser = user;
-
-        console.log("Login successful:", user.display_name || user.username);
-
         // Cập nhật UI
         this._updateUI();
 
@@ -404,8 +379,6 @@ class AuthService {
   logout() {
     // Clear authentication data
     this._clearAuthData();
-
-    console.log("User logged out successfully");
 
     // Cập nhật UI
     this._updateUI();

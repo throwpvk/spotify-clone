@@ -10,13 +10,14 @@ class ApiService {
     this.baseURL = APP_CONFIG.API.BASE_URL;
     this.timeout = APP_CONFIG.API.TIMEOUT;
     this.retryAttempts = APP_CONFIG.API.RETRY_ATTEMPTS;
-    
+
     // Lưu trữ dữ liệu content
     this.todaysHits = [];
     this.popularArtists = [];
     this.isLoading = false;
-    
+
     // Lưu trữ follow status
+    this.likedTrackIds = new Set();
     this.followedPlaylistIds = new Set();
     this.followedArtistIds = new Set();
   }
@@ -308,11 +309,6 @@ class ApiService {
     try {
       return await this.post(`${this.baseURL}/playlists/${playlistId}/follow`);
     } catch (error) {
-      // Nếu lỗi 409 (Conflict) - playlist đã được follow
-      if (error.status === 409) {
-        console.log("Playlist đã được follow");
-        return { success: true, message: "Already followed" };
-      }
       throw error;
     }
   }
@@ -392,10 +388,6 @@ class ApiService {
       if (this._hasAuthToken()) {
         await this._updateFollowStatus();
       }
-
-      console.log("Load content thành công");
-      console.log(`- Today's hits: ${this.todaysHits.length} items`);
-      console.log(`- Popular artists: ${this.popularArtists.length} items`);
     } catch (error) {
       console.error("Lỗi load content:", error);
       this.todaysHits = [];
@@ -420,7 +412,9 @@ class ApiService {
         await Promise.all(
           playlists.map(async (playlist) => {
             try {
-              const resTracks = await this.getPlaylistAllTracksById(playlist.id);
+              const resTracks = await this.getPlaylistAllTracksById(
+                playlist.id
+              );
               playlist.tracks = resTracks.success
                 ? resTracks.data.tracks || resTracks.data || []
                 : [];
@@ -430,8 +424,6 @@ class ApiService {
             }
           })
         );
-
-        console.log("Today's hits loaded:", playlists);
         return playlists;
       } else {
         console.error("Lỗi load Today's hits");
@@ -468,7 +460,6 @@ class ApiService {
             }
           })
         );
-        console.log("Popular artists loaded:", artists);
         return artists;
       } else {
         console.error("Lỗi load Popular artists");
@@ -510,6 +501,10 @@ class ApiService {
           name: "Liked Songs",
           tracks,
         };
+
+        tracks.forEach((track) => {
+          this.likedTrackIds.add(track.id);
+        });
       }
 
       // Xử lý followed playlists
@@ -520,7 +515,7 @@ class ApiService {
           [];
 
         // Cập nhật follow status
-        playlists.forEach(playlist => {
+        playlists.forEach((playlist) => {
           this.followedPlaylistIds.add(playlist.id);
         });
 
@@ -528,15 +523,14 @@ class ApiService {
         await Promise.all(
           playlists.map(async (playlist) => {
             try {
-              const resTracks = await this.getPlaylistAllTracksById(playlist.id);
+              const resTracks = await this.getPlaylistAllTracksById(
+                playlist.id
+              );
               playlist.tracks = resTracks.success
                 ? resTracks.data.tracks || resTracks.data || []
                 : [];
             } catch (err) {
-              console.error(
-                `Lỗi lấy tracks playlist ${playlist.id}:`,
-                err
-              );
+              console.error(`Lỗi lấy tracks playlist ${playlist.id}:`, err);
               playlist.tracks = [];
             }
           })
@@ -550,7 +544,7 @@ class ApiService {
           followedArtistsRes.data.artists || followedArtistsRes.data || [];
 
         // Cập nhật follow status
-        artists.forEach(artist => {
+        artists.forEach((artist) => {
           this.followedArtistIds.add(artist.id);
         });
 
@@ -571,7 +565,6 @@ class ApiService {
         result.followedArtists = artists;
       }
 
-      console.log("Load library thành công:", result);
       return result;
     } catch (error) {
       console.error("Lỗi load library:", error);
@@ -616,35 +609,55 @@ class ApiService {
     try {
       if (!this._hasAuthToken()) return;
 
-      const [followedPlaylistsRes, followedArtistsRes] = await Promise.all([
-        this.getFollowedPlaylists(),
-        this.getFollowedArtists(),
-      ]);
+      const [likedTracksRes, followedPlaylistsRes, followedArtistsRes] =
+        await Promise.all([
+          this.getLikedTracks(),
+          this.getFollowedPlaylists(),
+          this.getFollowedArtists(),
+        ]);
 
       // Reset follow status
+      this.likedTrackIds.clear();
       this.followedPlaylistIds.clear();
       this.followedArtistIds.clear();
 
+      // Xử lý liked tracks
+      if (likedTracksRes.success) {
+        const tracks = likedTracksRes.data.tracks || likedTracksRes.data || [];
+        tracks.forEach((track) => {
+          this.likedTrackIds.add(track.id);
+        });
+      }
+
       // Cập nhật playlist follow status
       if (followedPlaylistsRes.success) {
-        const playlists = followedPlaylistsRes.data.playlists || followedPlaylistsRes.data || [];
-        playlists.forEach(playlist => {
+        const playlists =
+          followedPlaylistsRes.data.playlists ||
+          followedPlaylistsRes.data ||
+          [];
+        playlists.forEach((playlist) => {
           this.followedPlaylistIds.add(playlist.id);
         });
       }
 
       // Cập nhật artist follow status
       if (followedArtistsRes.success) {
-        const artists = followedArtistsRes.data.artists || followedArtistsRes.data || [];
-        artists.forEach(artist => {
+        const artists =
+          followedArtistsRes.data.artists || followedArtistsRes.data || [];
+        artists.forEach((artist) => {
           this.followedArtistIds.add(artist.id);
         });
       }
-
-      console.log("Follow status updated");
     } catch (error) {
       console.error("Lỗi cập nhật follow status:", error);
     }
+  }
+
+  /**
+   * Kiểm tra track đã được like chưa
+   */
+  isTrackLiked(trackId) {
+    return this.likedTrackIds.has(trackId);
   }
 
   /**
@@ -671,7 +684,7 @@ class ApiService {
       }
 
       const isFollowed = this.isPlaylistFollowed(playlistId);
-      
+
       if (isFollowed) {
         // Unfollow playlist
         await this.unfollowPlaylist(playlistId);
@@ -681,8 +694,6 @@ class ApiService {
         await this.followPlaylist(playlistId);
         this.followedPlaylistIds.add(playlistId);
       }
-
-      console.log("Follow status updated:", this.followedPlaylistIds);
 
       return !isFollowed; // Trả về trạng thái mới
     } catch (error) {
@@ -701,7 +712,7 @@ class ApiService {
       }
 
       const isFollowed = this.isArtistFollowed(artistId);
-      
+
       if (isFollowed) {
         // Unfollow artist
         await this.unfollowArtist(artistId);
@@ -711,9 +722,6 @@ class ApiService {
         await this.followArtist(artistId);
         this.followedArtistIds.add(artistId);
       }
-
-      console.log("Follow status updated:", this.followedArtistIds);
-
       return !isFollowed; // Trả về trạng thái mới
     } catch (error) {
       console.error("Lỗi toggle artist follow:", error);

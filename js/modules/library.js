@@ -40,15 +40,10 @@ class Library {
         if (apiService) {
           // Load library data
           const libraryData = await apiService.loadLibraryData();
-          
+
           this.likedTracks = libraryData.likedTracks;
           this.followedPlaylists = libraryData.followedPlaylists;
           this.followedArtists = libraryData.followedArtists;
-
-          console.log("Load library thành công");
-          console.log(`Liked tracks:`, this.likedTracks);
-          console.log(`Followed playlists:`, this.followedPlaylists);
-          console.log(`Followed artists:`, this.followedArtists);
         }
       }
     } catch (error) {
@@ -95,7 +90,7 @@ class Library {
     likedSongsItem.className = "library-item active";
     likedSongsItem.setAttribute("data-type", "liked");
 
-    const trackCount = this.likedTracks.length;
+    const trackCount = this.likedTracks.tracks.length;
 
     likedSongsItem.innerHTML = `
       <div data-label="tooltip" class="item-icon liked-songs">
@@ -131,9 +126,7 @@ class Library {
       playlist.cover_image ||
       "placeholder.svg?height=48&width=48";
     const title = playlist.name || playlist.title || "Unknown Playlist";
-    const owner =
-      playlist.owner_name || playlist.artist_name || "Unknown Owner";
-    const trackCount = playlist.track_count || playlist.tracks?.length || 0;
+    const trackCount = playlist.total_tracks || playlist.tracks?.length || 0;
 
     playlistItem.innerHTML = `
       <div data-label="tooltip" class="item-icon">
@@ -146,9 +139,9 @@ class Library {
       </div>
       <div class="item-info">
         <div class="item-title">${title}</div>
-        <div class="item-subtitle">Playlist • ${owner}${
-      trackCount > 0 ? ` • ${trackCount} songs` : ""
-    }</div>
+        <div class="item-subtitle">Playlist • ${
+          trackCount > 0 ? `${trackCount} songs` : ""
+        }</div>
       </div>
     `;
 
@@ -201,8 +194,6 @@ class Library {
    * Xử lý click vào Liked Songs
    */
   _handleLikedSongsClick() {
-    console.log("Liked Songs clicked");
-
     // Cập nhật active state
     this._updateActiveState("liked");
 
@@ -228,8 +219,6 @@ class Library {
    * Xử lý click vào playlist
    */
   _handlePlaylistClick(playlist) {
-    console.log("Playlist clicked:", playlist);
-
     // Cập nhật active state
     this._updateActiveState("playlist", playlist.id);
 
@@ -251,8 +240,6 @@ class Library {
    * Xử lý click vào artist
    */
   _handleArtistClick(artist) {
-    console.log("Artist clicked:", artist);
-
     // Cập nhật active state
     this._updateActiveState("artist", artist.id);
 
@@ -277,21 +264,23 @@ class Library {
    * Thiết lập follow button events cho library
    */
   _setupLibraryFollowButtonEvents() {
-    const followBtn = document.querySelector(".library-btn.add, .library-btn.remove"); // Select cả add và remove
+    const followBtn = document.querySelector(
+      ".library-btn.add, .library-btn.remove"
+    ); // Select cả add và remove
     if (!followBtn) return;
 
     followBtn.addEventListener("click", async (e) => {
       e.stopPropagation();
-      
+
       const id = followBtn.getAttribute("data-id");
       const type = followBtn.getAttribute("data-type");
-      
+
       if (!id || !type) return;
 
       try {
         const apiService = window.spotifyApp.getService("api");
         const uiService = window.spotifyApp.getService("ui");
-        
+
         if (!apiService) return;
 
         // Disable button trong lúc xử lý
@@ -313,13 +302,14 @@ class Library {
 
         // Hiển thị toast
         if (uiService) {
-          const message = isFollowed ? "Added to Library" : "Removed from Library";
+          const message = isFollowed
+            ? "Added to Library"
+            : "Removed from Library";
           uiService.showToast(message, "success");
         }
-
       } catch (error) {
         console.error("Lỗi follow/unfollow:", error);
-        
+
         // Hiển thị toast lỗi
         const uiService = window.spotifyApp.getService("ui");
         if (uiService) {
@@ -338,7 +328,7 @@ class Library {
    */
   _updateLibraryFollowButtonUI(button, isFollowed) {
     const icon = button.querySelector("i");
-    
+
     if (isFollowed) {
       // Đã follow - hiển thị dấu check
       icon.className = "fa-solid fa-circle-check";
@@ -359,25 +349,31 @@ class Library {
    */
   _updateActiveState(type, id = null) {
     const libraryItems = document.querySelectorAll(".library-item");
-    
+
     // Xóa active class từ tất cả items
-    libraryItems.forEach(item => {
+    libraryItems.forEach((item) => {
       item.classList.remove("active");
     });
 
     // Thêm active class cho item được click
     if (type === "liked") {
-      const likedItem = document.querySelector('.library-item[data-type="liked"]');
+      const likedItem = document.querySelector(
+        '.library-item[data-type="liked"]'
+      );
       if (likedItem) {
         likedItem.classList.add("active");
       }
     } else if (type === "playlist" && id) {
-      const playlistItem = document.querySelector(`.library-item[data-type="playlist"][data-id="${id}"]`);
+      const playlistItem = document.querySelector(
+        `.library-item[data-type="playlist"][data-id="${id}"]`
+      );
       if (playlistItem) {
         playlistItem.classList.add("active");
       }
     } else if (type === "artist" && id) {
-      const artistItem = document.querySelector(`.library-item[data-type="artist"][data-id="${id}"]`);
+      const artistItem = document.querySelector(
+        `.library-item[data-type="artist"][data-id="${id}"]`
+      );
       if (artistItem) {
         artistItem.classList.add("active");
       }
@@ -402,7 +398,6 @@ class Library {
       const uiService = window.spotifyApp.getService("ui");
       if (uiService) {
         uiService.setupContextMenu();
-        console.log("setupContextMenu");
       }
     }
   }
@@ -413,7 +408,7 @@ class Library {
   async refreshLibrary() {
     await this._loadLibraryData();
     this._renderLibraryItems();
-    
+
     // Áp dụng lại chế độ lọc hiện tại sau khi refresh
     this._applyCurrentFilter();
   }
@@ -425,7 +420,7 @@ class Library {
     const playlistTab = document.querySelector(".tab-playlist");
     const artistTab = document.querySelector(".tab-artist");
     const libraryContent = document.querySelector(".library-content");
-    
+
     if (!playlistTab || !artistTab || !libraryContent) return;
 
     // Kiểm tra trạng thái hiện tại của các tab
@@ -433,13 +428,14 @@ class Library {
     const isArtistActive = artistTab.classList.contains("active");
 
     const items = libraryContent.querySelectorAll(".library-item");
-    
+
     items.forEach((item) => {
       const type = item.dataset.type?.toLowerCase() || "";
-      
+
       if (isPlaylistActive) {
         // Chỉ hiển thị playlist và liked
-        item.style.display = (type === "playlist" || type === "liked") ? "" : "none";
+        item.style.display =
+          type === "playlist" || type === "liked" ? "" : "none";
       } else if (isArtistActive) {
         // Chỉ hiển thị artist
         item.style.display = type === "artist" ? "" : "none";
